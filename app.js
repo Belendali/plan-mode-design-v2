@@ -96,7 +96,7 @@ stage.innerHTML = `
   <div class="studio"></div>
   <div class="chrome"></div>
   <button class="trialflag" id="trial-flag" title="Demo control — flips the free-run state">
-    Free run <b>available</b>
+    <i></i><span>Free run <b>available</b></span>
   </button>
   <div class="panel">
     <div class="panel__glow"><img src="assets/bg-ellipses.svg" alt=""></div>
@@ -1280,6 +1280,9 @@ function paintTrial() {
   if (el2) {
     el2.classList.toggle('is-spent', trial.spent);
     el2.querySelector('b').textContent = trial.spent ? 'used' : 'available';
+    el2.title = trial.spent
+      ? 'Demo control — free run is spent, so Approve & build hits the paywall'
+      : 'Demo control — free run is available, so Approve & build goes straight to work';
   }
 }
 

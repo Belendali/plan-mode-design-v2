@@ -696,15 +696,27 @@ body{
 .doc__scroll{padding-bottom:104px}
 
 /* ── Demo control for the second-time experience ──────────────────── */
+/* Clear of the Studio panels, and obviously a demo control rather than product UI */
 .trialflag{
-  position:absolute;left:14px;bottom:12px;z-index:9;
-  padding:5px 11px;border-radius:20px;cursor:pointer;
-  background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);
-  font-family:var(--font);font-size:11px;color:rgba(255,255,255,.5);
-  opacity:.4;transition:opacity .2s;
+  position:absolute;left:336px;bottom:20px;z-index:9;
+  display:flex;align-items:center;gap:9px;
+  padding:9px 14px 9px 12px;border-radius:12px;cursor:pointer;
+  background:rgba(10,8,10,.82);border:1px dashed rgba(255,255,255,.28);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  font-family:var(--font);font-size:12px;color:rgba(255,255,255,.72);
+  transition:border-color .2s,background .2s;
 }
-.trialflag:hover{opacity:1}
+.trialflag:hover{background:rgba(10,8,10,.95);border-color:rgba(255,255,255,.5)}
+.trialflag::before{
+  content:'DEMO';font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;
+  padding:3px 6px;border-radius:5px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.55);
+}
+.trialflag i{
+  width:8px;height:8px;border-radius:50%;background:var(--lime);flex:none;
+  box-shadow:0 0 0 3px rgba(192,240,0,.18);
+}
 .trialflag b{color:var(--lime);font-weight:500}
+.trialflag.is-spent i{background:#FF8A3D;box-shadow:0 0 0 3px rgba(255,138,61,.18)}
 .trialflag.is-spent b{color:#FF8A3D}
 
 /* ── Pricing ──────────────────────────────────────────────────────── */
