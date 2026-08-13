@@ -2,6 +2,8 @@
    File PWtgAaGdl6znpuQykrnIbb · node 45623:94837
    Frames: 01 Start Chat → 02 Simple Question → 03 Recommend Plan Mode → 04 Planner start */
 
+const QUERY = location.search;   // the deep-link handler clears this later
+
 // ── Script ────────────────────────────────────────────────────────
 const IDEAS = [
   { icon: 'assets/ghost.svg',  text: 'Build a ghost running a midnight bakery', mod: 'idea--center' },
@@ -93,6 +95,9 @@ const stage = document.getElementById('stage');
 stage.innerHTML = `
   <div class="studio"></div>
   <div class="chrome"></div>
+  <button class="trialflag" id="trial-flag" title="Demo control — flips the free-run state">
+    Free run <b>available</b>
+  </button>
   <div class="panel">
     <div class="panel__glow"><img src="assets/bg-ellipses.svg" alt=""></div>
 
@@ -143,6 +148,8 @@ const GLYPH = {
   send: '<svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 15V3M9 3L4 8M9 3l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   stop: '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="3" fill="currentColor"/></svg>',
 };
+
+document.getElementById('trial-flag').onclick = () => trial.toggle();
 
 const log = document.getElementById('log');
 const perch = document.getElementById('perch');
@@ -343,6 +350,8 @@ function screenPlan() {
   plan.onclick = (e) => { if (!e.target.closest('.reply')) openPlanDoc(); };
   push(plan);
 
+  setTimeout(openPlanDoc, 700);
+
   const replies = el('div', 'replies');
   PLAN.replies.forEach((r) => {
     const b = el('button', 'reply' + (r.go ? ' reply--go' : ''), r.text);
@@ -350,7 +359,7 @@ function screenPlan() {
       replies.remove();
       push(el('div', 'msg msg--user', r.text));
       if (r.go) {
-        setTimeout(() => screenBuild(), 700);
+        setTimeout(startBuild, 400);
       } else {
         setTimeout(() => push(el('div', 'msg msg--agent',
           'Sure — which part? The night, the cops, or how you win?')), 600);
@@ -359,6 +368,15 @@ function screenPlan() {
     replies.appendChild(b);
   });
   push(replies);
+}
+
+// The plan is free to read. Building is what costs — so that is where the
+// wall goes, once the user has seen what they'd be paying for.
+function startBuild() {
+  const doc = document.getElementById('plan-doc');
+  if (doc) { doc.classList.remove('is-on'); setTimeout(() => doc.remove(), 320); }
+  if (trial.spent) { openPaywall(() => setTimeout(screenBuild, 300)); return; }
+  screenBuild();
 }
 
 // ── Build phase ───────────────────────────────────────────────────
@@ -654,7 +672,7 @@ function mountBuild() {
   `;
   document.getElementById('stage').appendChild(build);
   // ?clean — hide the overlaid UI so the viewport can be captured as a plate
-  if (location.search.includes('clean')) build.classList.add('is-clean');
+  if (QUERY.includes('clean')) build.classList.add('is-clean');
   requestAnimationFrame(() => build.classList.add('is-on'));
   document.getElementById('mini-try').onclick = tryDemo;
   return build;
@@ -894,7 +912,7 @@ screenStart();
 
 // ?plate=a|b|c — freeze the viewport at one build state, UI hidden, no transitions.
 // Used to export capture plates for the Figma frames.
-const plate = (location.search.match(/plate=([abc])/) || [])[1];
+const plate = (QUERY.match(/plate=([abc])/) || [])[1];
 if (plate) {
   clearStart();
   log.innerHTML = '';
@@ -904,8 +922,14 @@ if (plate) {
   if (plate === 'c') b.classList.add('is-test');
 }
 
+// ?pay — jump straight to the pricing modal (review / capture)
+if (QUERY.includes('pay')) {
+  STEPS[4][1]();
+  setTimeout(() => openPaywall(), 120);
+}
+
 // ?doc — jump straight to the opened plan document (review / capture)
-if (location.search.includes('doc')) {
+if (QUERY.includes('doc')) {
   STEPS[4][1]();
   setTimeout(openPlanDoc, 60);
 }
@@ -1060,10 +1084,21 @@ function planDoc() {
       </section>
     </div>
   `;
+  const bar = el('div', 'doc__bar');
+  bar.innerHTML = `
+    <span class="doc__barnote">Read the plan — you approve before anything gets built.</span>
+    <span class="doc__baracts">
+      <button class="btn-quiet" id="doc-change">I want to change something</button>
+      <button class="btn-brand" id="doc-approve">Approve &amp; build</button>
+    </span>`;
+  wrap.appendChild(bar);
+
   document.getElementById('stage').appendChild(wrap);
   requestAnimationFrame(() => wrap.classList.add('is-on'));
   const close = () => { wrap.classList.remove('is-on'); setTimeout(() => wrap.remove(), 320); };
   wrap.querySelector('#doc-close').onclick = close;
+  wrap.querySelector('#doc-change').onclick = close;
+  wrap.querySelector('#doc-approve').onclick = () => { close(); startBuild(); };
   return wrap;
 }
 
@@ -1233,3 +1268,81 @@ function mentionTip() {
   b.onclick = () => { chips.remove(); tip.remove(); runMention('@Artist make it a desert instead'); };
   chips.appendChild(b);
 }
+
+// ── Free run state ────────────────────────────────────────────────
+// One free crew run per account; it only spends once something ships.
+const trial = {
+  spent: QUERY.includes('spent'),
+  toggle() { this.spent = !this.spent; paintTrial(); },
+};
+function paintTrial() {
+  const el2 = document.getElementById('trial-flag');
+  if (el2) {
+    el2.classList.toggle('is-spent', trial.spent);
+    el2.querySelector('b').textContent = trial.spent ? 'used' : 'available';
+  }
+}
+
+// ── Pricing ───────────────────────────────────────────────────────
+const TIERS = [
+  { key: 'free', name: 'FREE', price: '$0', per: 'forever', kicker: 'For trying Wanaka and shipping your first game.',
+    note: 'No credit card required', credits: ['60', 'credits/ day'], cta: 'Current Plan', ctaKind: 'now',
+    feats: ['Chat with agent in Wanaka 1.0 Lite', 'Generate image × 2', 'Generate 3D model × 1'] },
+  { key: 'pro', name: 'PRO', price: '$19', per: '/month', kicker: 'For creators shipping real games regularly.',
+    note: 'Billed monthly', credits: ['2,000', 'credits/ month'], cta: '⚡ Upgrade to Pro', ctaKind: 'pro',
+    badge: 'Most popular',
+    feats: ['Chat with agent in Wanaka 1.0 Pro', 'Generate image × 100', 'Generate 3D model × 40',
+            'No watermark on exports', 'Exclusive feedback channel', 'More game exposure opportunities'] },
+  { key: 'max', name: 'MAX', price: '$49', per: '/month', kicker: 'For pros and small teams going commercial.',
+    note: 'Billed monthly', credits: ['6,000', 'credits/ month'], cta: '♛ Upgrade to Max', ctaKind: 'max',
+    badge: 'Most Powerful',
+    feats: ['Chat with agent in Wanaka 1.0 Pro', 'Generate image × 500', 'Generate 3D model × 150',
+            'No watermark on exports', 'Exclusive feedback channel', 'More game exposure opportunities',
+            'Opportunities to preview new features'] },
+];
+
+function openPaywall(onUpgrade) {
+  if (document.getElementById('paywall')) return;
+  const w = el('div', 'pay');
+  w.id = 'paywall';
+  w.innerHTML = `
+    <div class="pay__bar">
+      <button class="pay__back">← Back</button>
+      <button class="pay__x" aria-label="Close">✕</button>
+    </div>
+    <div class="pay__scroll">
+      <p class="pay__eyebrow">PRICING</p>
+      <h1 class="pay__h">Plans that grow with your imagination</h1>
+      <p class="pay__sub">Start free and make your first game today. Upgrade when your ideas get bigger.<br>
+        Every plan runs on Wanaka Credits that power AI building and 3D generation.</p>
+      <div class="cycle">
+        <button class="cycle__b is-on">Monthly</button>
+        <button class="cycle__b">Yearly</button>
+        <span class="cycle__tag">2 months free</span>
+      </div>
+      <div class="tiers">
+        ${TIERS.map((t) => `
+          <div class="tier tier--${t.key}">
+            ${t.badge ? `<span class="tier__badge">${t.badge}</span>` : ''}
+            <h2 class="tier__name">${t.name}</h2>
+            <p class="tier__kicker">${t.kicker}</p>
+            <p class="tier__price"><b>${t.price}</b><span>${t.per}</span></p>
+            <p class="tier__note">${t.note}</p>
+            <p class="tier__credits"><b>${t.credits[0]}</b> ${t.credits[1]}</p>
+            <button class="tier__cta tier__cta--${t.ctaKind}">${t.cta}</button>
+            <ul class="tier__feats">${t.feats.map((f) => `<li>${f}</li>`).join('')}</ul>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('stage').appendChild(w);
+  requestAnimationFrame(() => w.classList.add('is-on'));
+  const close = () => { w.classList.remove('is-on'); setTimeout(() => w.remove(), 280); };
+  w.querySelector('.pay__x').onclick = close;
+  w.querySelector('.pay__back').onclick = close;
+  w.querySelectorAll('.tier__cta--pro, .tier__cta--max').forEach((b) => {
+    b.onclick = () => { close(); trial.spent = false; paintTrial(); onUpgrade && onUpgrade(); };
+  });
+}
+
+paintTrial();   // `trial` is declared below the init block
