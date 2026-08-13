@@ -127,7 +127,7 @@ stage.innerHTML = `
             <button class="iconbtn"><img class="glyph" src="assets/plus.svg" alt=""></button>
             <button class="iconbtn"><img src="assets/scissors.svg" alt=""></button>
           </div>
-          <button class="send" id="send"><img src="assets/send-circle.svg" alt=""><span class="send__stop"></span></button>
+          <button class="send is-disabled" id="send" aria-label="Send"><span class="send__glyph" id="send-glyph"></span></button>
         </div>
       </div>
     </div>
@@ -139,10 +139,25 @@ stage.innerHTML = `
   </div>
 `;
 
+const GLYPH = {
+  send: '<svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M9 15V3M9 3L4 8M9 3l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  stop: '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="3" fill="currentColor"/></svg>',
+};
+
 const log = document.getElementById('log');
 const perch = document.getElementById('perch');
 const input = document.getElementById('input');
 const switchEl = document.getElementById('switch');
+const sendEl = document.getElementById('send');
+const sendGlyph = document.getElementById('send-glyph');
+
+// disabled → nothing to send · send → something typed · busy → the crew is working
+function setSend(state) {
+  sendEl.className = 'send is-' + state;
+  sendGlyph.innerHTML = state === 'busy' ? GLYPH.stop : GLYPH.send;
+  sendEl.setAttribute('aria-label', state === 'busy' ? 'Stop' : 'Send');
+}
+setSend('disabled');
 
 const setPerch = (who) => {
   perch.src = who === 'plan' ? 'assets/cat-plan.gif' : 'assets/cat-think.png';
@@ -228,6 +243,9 @@ function askOptions(options) {
 
 function screenPitch() {
   perch.style.opacity = '0'; // the big planner cat carries this moment on its own
+  const scrim = el('div', 'pitch__scrim');
+  scrim.id = 'pitch-scrim';
+  document.querySelector('.panel').appendChild(scrim);
   const pitch = el('div', 'pitch');
   pitch.innerHTML = `
     <img class="pitch__cat" src="assets/cat-plan.gif" alt="">
@@ -252,12 +270,20 @@ function screenPitch() {
   `;
   pitch.querySelector('.btn-white').onclick = () => screenPlanning(pitch);
   pitch.querySelector('.btn-quiet').onclick = () => declineCrew(pitch);
-  push(pitch);
+  document.querySelector('.panel').appendChild(pitch);
 }
 
 // Declining costs nothing: the offer stays reachable from the switch.
+function dismissPitch(pitch) {
+  const scrim = document.getElementById('pitch-scrim');
+  if (scrim) scrim.remove();
+  if (!pitch) return;
+  pitch.classList.add('is-leaving');
+  setTimeout(() => pitch.remove(), 420);
+}
+
 function declineCrew(pitch) {
-  pitch.remove();
+  dismissPitch(pitch);
   push(el('div', 'msg msg--user', PITCH.decline));
   setTimeout(() => {
     push(el('div', 'msg msg--agent', "Sure — say the word if you change your mind."));
@@ -273,11 +299,11 @@ async function screenPlanning(pitch) {
   // own beat, so the user sees where the mode they just bought actually lives.
   const btn = document.getElementById('plannerbtn');
   switchEl.classList.add('is-on');
+  btn.classList.remove('has-new');
   btn.classList.add('is-flash');
   setTimeout(() => btn.classList.remove('is-flash'), 1400);
-  await wait(pitch ? 620 : 0);
-
-  if (pitch) pitch.remove();
+  dismissPitch(pitch);          // slides back down, handing the composer back
+  await wait(pitch ? 560 : 0);
   setPerch('plan');
 
   push(el('div', 'joined', 'Crew assembled'));
@@ -312,6 +338,9 @@ function screenPlan() {
       </div>
     </div>
   `;
+  plan.classList.add('is-openable');
+  plan.title = 'Open the full plan';
+  plan.onclick = (e) => { if (!e.target.closest('.reply')) openPlanDoc(); };
   push(plan);
 
   const replies = el('div', 'replies');
@@ -602,6 +631,7 @@ function mountBuild() {
   build.id = 'build';
   build.innerHTML = `
     <div class="build__art">${citySVG()}</div>
+    <div class="build__desert">${desertSVG()}</div>
     <div class="build__wire">${wireframeSVG()}</div>
     <div class="build__hud">
       <div class="hud hud--time"><small>TIME</small>02:45</div>
@@ -609,7 +639,7 @@ function mountBuild() {
     </div>
     <div class="build__status" id="build-status">Setting the stage…</div>
     <div class="miniplan" id="miniplan">
-      <div class="miniplan__title">GAME PLAN 1.0</div>
+      <div class="miniplan__title">TASK FOR V1.0</div>
       ${CREW.map((c) => `
         <div class="agent is-idle" id="ms-${c.key}">
           <span class="agent__face"><img src="${c.gif}" alt=""></span>
@@ -661,6 +691,7 @@ function agentSay(c, msg) {
 
 async function screenBuild() {
   busy = true;
+  setSend('busy');
   clearStart();
   log.innerHTML = '';
   perch.style.opacity = '0';
@@ -687,7 +718,9 @@ async function screenBuild() {
     // ── hand back to the user ──
     setAgent(c.key, 'review', 'Waiting for your check');
     setStatus(c.ready + ' — your call', false);
+    setSend(input.value.trim() ? 'send' : 'disabled');
     await review(c);
+    setSend('busy');
     setAgent(c.key, 'done', c.ready);
   }
 
@@ -696,6 +729,7 @@ async function screenBuild() {
   readLine('First playable ready ✓');
   plannerSay("That's version 1 — give it a drive.");
   input.placeholder = 'Tell Wana what to change…';
+  setSend(input.value.trim() ? 'send' : 'disabled');
   busy = false;
 }
 
@@ -761,6 +795,7 @@ function tryDemo() {
       `<span class="crewmsg__avatar"><img src="${r.gif}" alt=""></span>
        <span><strong>${r.name}</strong>${r.text}</span>`));
   }, 250 + i * (window.__fast ? 120 : 550)));
+  setTimeout(mentionTip, 250 + recaps.length * (window.__fast ? 120 : 550) + 400);
 }
 
 // Jump straight to the finished build (director shortcut, no review gates).
@@ -796,6 +831,8 @@ document.getElementById('send').onclick = () => {
   const v = input.value.trim();
   if (!v) return;
   input.value = '';
+  setSend('disabled');
+  if (parseMention(v)) { runMention(v); return; }
   if (awaitingReview) {
     if (GO_WORDS.test(v)) awaitingReview.go(v);
     else awaitingReview.change(v);
@@ -803,6 +840,9 @@ document.getElementById('send').onclick = () => {
   }
   runConversation(v);
 };
+input.addEventListener('input', () => {
+  if (!sendEl.classList.contains('is-busy')) setSend(input.value.trim() ? 'send' : 'disabled');
+});
 input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('send').click(); }
 });
@@ -864,10 +904,332 @@ if (plate) {
   if (plate === 'c') b.classList.add('is-test');
 }
 
+// ?doc — jump straight to the opened plan document (review / capture)
+if (location.search.includes('doc')) {
+  STEPS[4][1]();
+  setTimeout(openPlanDoc, 60);
+}
+
 // One-shot deep links for review: #step1 … #step7
 const jump = parseInt((location.hash.match(/^#step(\d)$/) || [])[1], 10);
 if (jump >= 1 && jump <= STEPS.length) {
   history.replaceState(null, '', location.pathname);
   if (jump < 6) unmountBuild();
   STEPS[jump - 1][1]();
+}
+
+// ── Game Dev Plan document ────────────────────────────────────────
+// Structure mirrors the real director plan payload; content is this demo's game.
+const PLAN_DOC = {
+  title: 'Getaway Drive',
+  tagline: 'One driver, five cop cars, and the longest night in New York.',
+  version: 'v1',
+  overview: [
+    ['Genre', '3D Driving / Chase'],
+    ['Session', '3 min'],
+    ['Complexity', 'M'],
+    ['Budget', '320~560 credits · ~10 min'],
+  ],
+  verbs: ['drive', 'outrun', 'collect'],
+  progression: 'You drive a compact night-time Manhattan grid while cop cars close in. Coins are scattered along the streets; grabbing them raises your score, and the cops learn your route as the run goes on. Escaping the district ends the run and shows your take.',
+  winlose: 'Win: escape the district with the cops off your tail. Lose: they box you in before you clear the last block.',
+  art: [
+    { name: 'Neon Night City', key: 'neon_night', on: true,
+      colors: ['#0D0D1A', '#FF2D78', '#00F5D4', '#FFE620', '#7B2FBE'],
+      note: 'Dark city after midnight; neon storefronts and glowing coins on a deep indigo skybox.' },
+    { name: 'Low-Poly Cartoon', key: 'lowpoly_cartoon', on: false,
+      colors: ['#F7C948', '#E84855', '#3A86FF', '#2EC4B6', '#1B1B2F'],
+      note: 'Chunky low-poly blocks and cars with flat cel-shading on a clean daylit sky.' },
+    { name: 'Pastel Daylight', key: 'pastel_day', on: false,
+      colors: ['#FAF3DD', '#C8E6C9', '#F48FB1', '#81D4FA', '#FFB74D'],
+      note: 'Soft pastels, rounded assets and a warm golden-hour haze — light and approachable.' },
+  ],
+  scenes: [
+    ['#0', 'Night Streets', 'The only scene — driveable block grid, coin pickups, cop AI, HUD and results overlay.', '—'],
+  ],
+  stages: [
+    { key: 'dev', owner: 'Developer Wana', gif: 'assets/wana-dev.gif', label: 'Code',
+      body: 'Arcade kinematic car on a compact night city grid, five pursuing cop cars that learn your route, coins along the streets, escape condition, results screen and restart. Full HUD — speed, timer, coins.',
+      depends: 'No prerequisites, ready to start',
+      accept: ['Car steers with a snappy arcade feel on city roads',
+               'Coins increment the counter and play a pickup SFX',
+               'Cops re-route toward you as the run goes on',
+               'Clearing the district shows WIN; getting boxed in shows FAIL'] },
+    { key: 'art', owner: 'Artist Wana', gif: 'assets/wana-artist.gif', label: 'Art',
+      body: 'Replace the blockout with the chosen palette: real car and cop models, lit storefronts, wet-road reflections, sky preset and lighting grade. Readability pass so coins stay visible at speed.',
+      depends: 'code → art',
+      accept: ['The grid reads as a recognisable night Manhattan block',
+               'Player and cop cars are proper models, not boxes',
+               'Coins stay legible against neon at full speed',
+               'Lighting and sky match the chosen palette'] },
+    { key: 'test', owner: 'Tester Wana', gif: 'assets/wana-tester.gif', label: 'Playtest',
+      body: 'Drive it start to finish. Check the chase stays tense without being unfair, and that a full run fits the three-minute session.',
+      depends: 'art → playtest',
+      accept: ['A full run completes inside 3 minutes',
+               'The chase is escapable but never trivial',
+               'Start → chase → escape holds up across five runs'] },
+  ],
+  risks: [
+    ['Cop pursuit that "learns your route" can turn unfair fast', 'Cap how much they adapt per lap and always leave one open exit'],
+    ['Coins can land inside geometry on a dense grid', 'Spawn along the road centreline from sampled waypoints instead of at random'],
+  ],
+  degrade: ['Drop from five cop cars to three if the chase costs too much budget',
+            'Reuse catalog street props if generated ones read poorly at speed'],
+};
+
+function planDoc() {
+  const d = PLAN_DOC;
+  const wrap = el('div', 'doc');
+  wrap.id = 'plan-doc';
+  wrap.innerHTML = `
+    <button class="doc__close" id="doc-close" aria-label="Close">✕</button>
+    <div class="doc__scroll">
+      <header class="doc__hero">
+        <div class="compare">
+          <figure class="compare__half">
+            <img src="assets/card-a.jpg" alt="">
+            <figcaption>Blockout · now</figcaption>
+          </figure>
+          <figure class="compare__half">
+            <img src="assets/card-b.jpg" alt="">
+            <figcaption>Version 1.0 · target</figcaption>
+          </figure>
+          <span class="compare__seam"></span>
+        </div>
+        <div class="doc__title">
+          <h1>${d.title}<span class="doc__ver">${d.version}</span></h1>
+          <p>${d.tagline}</p>
+        </div>
+        <div class="stats">
+          ${d.overview.map(([k, v]) => `<div class="stat"><span class="stat__k">${k}</span><span class="stat__v">${v}</span></div>`).join('')}
+        </div>
+      </header>
+
+      <section class="doc__sec">
+        <h2>Core loop</h2>
+        <div class="verbs">${d.verbs.map((v) => `<span class="verb">${v}</span>`).join('')}</div>
+        <p class="doc__p">${d.progression}</p>
+        <p class="doc__p doc__p--rule">${d.winlose}</p>
+      </section>
+
+      <section class="doc__sec">
+        <h2>Art direction</h2>
+        <div class="styles">
+          ${d.art.map((a) => `
+            <div class="style${a.on ? ' is-on' : ''}">
+              <div class="style__swatches">${a.colors.map((c) => `<i style="background:${c}"></i>`).join('')}</div>
+              <div class="style__meta">
+                <span class="style__name">${a.name}${a.on ? '<em>Selected</em>' : ''}</span>
+                <span class="style__note">${a.note}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </section>
+
+      <section class="doc__sec">
+        <h2>Dev stages</h2>
+        <div class="stages">
+          ${d.stages.map((s, i) => `
+            <article class="stage">
+              <div class="stage__head">
+                <span class="stage__face"><img src="${s.gif}" alt=""></span>
+                <span class="stage__who"><b>${s.owner}</b><em>${s.label} · ${s.depends}</em></span>
+                <span class="stage__n">${i + 1}</span>
+              </div>
+              <p class="doc__p">${s.body}</p>
+              <ul class="accept">${s.accept.map((a) => `<li>${a}</li>`).join('')}</ul>
+            </article>`).join('')}
+        </div>
+      </section>
+
+      <section class="doc__sec">
+        <h2>Scenes</h2>
+        <table class="grid">
+          <thead><tr><th>#</th><th>Scene</th><th>Purpose</th><th>Depends on</th></tr></thead>
+          <tbody>${d.scenes.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </section>
+
+      <section class="doc__sec">
+        <h2>Risks</h2>
+        <div class="risks">
+          ${d.risks.map(([r, m]) => `<div class="risk"><span class="risk__r">${r}</span><span class="risk__m">${m}</span></div>`).join('')}
+        </div>
+        <h3 class="doc__h3">If it runs long</h3>
+        <ul class="accept accept--plain">${d.degrade.map((x) => `<li>${x}</li>`).join('')}</ul>
+      </section>
+    </div>
+  `;
+  document.getElementById('stage').appendChild(wrap);
+  requestAnimationFrame(() => wrap.classList.add('is-on'));
+  const close = () => { wrap.classList.remove('is-on'); setTimeout(() => wrap.remove(), 320); };
+  wrap.querySelector('#doc-close').onclick = close;
+  return wrap;
+}
+
+function openPlanDoc() {
+  if (document.getElementById('plan-doc')) return;
+  planDoc();
+}
+
+// ── Desert dusk — what @Artist swaps the world to ─────────────────
+function dune(i, side, p) {
+  const w = 260 + rnd(i) * 340 + p * 620;
+  const h = 70 + rnd(i + 11) * 90 + p * 260;
+  const base = depthY(p);
+  const edge = ROAD_CX + (side ? 1 : -1) * halfW(p);
+  const x = side ? edge - 40 + rnd(i + 3) * 40 : edge + 40 - w - rnd(i + 3) * 40;
+  const shade = side ? '#6E3C22' : '#8A4E2C';
+  return `<path d="M${x.toFixed(0)} ${base.toFixed(0)}
+    q${(w * 0.28).toFixed(0)} ${(-h).toFixed(0)} ${(w * 0.55).toFixed(0)} ${(-h * 0.72).toFixed(0)}
+    q${(w * 0.3).toFixed(0)} ${(h * 0.3).toFixed(0)} ${(w * 0.45).toFixed(0)} ${(h * 0.72).toFixed(0)} Z"
+    fill="${shade}" opacity="${(0.75 + p * 0.25).toFixed(2)}"/>`;
+}
+function cactus(x, y, s) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <rect x="-9" y="-96" width="18" height="96" rx="9" fill="#2F5D42"/>
+    <rect x="-34" y="-74" width="14" height="44" rx="7" fill="#2F5D42"/>
+    <rect x="-34" y="-74" width="14" height="14" rx="7" fill="#2F5D42"/>
+    <rect x="20" y="-84" width="14" height="52" rx="7" fill="#2F5D42"/>
+    <rect x="20" y="-84" width="14" height="14" rx="7" fill="#2F5D42"/>
+    <ellipse cx="0" cy="4" rx="26" ry="6" fill="#000" opacity=".28"/>
+  </g>`;
+}
+function desertSVG() {
+  const dunes = [0.03, 0.1, 0.2, 0.34, 0.52, 0.76]
+    .map((p, i) => dune(i * 2, 0, p) + dune(i * 2 + 1, 1, p)).join('');
+  const cacti = [[0.14, 0], [0.3, 1], [0.58, 0], [0.82, 1]].map(([p, side], i) => {
+    const y = depthY(p), e = halfW(p);
+    const x = ROAD_CX + (side ? 1 : -1) * (e + 40 + rnd(i) * 90);
+    return cactus(x.toFixed(0), y.toFixed(0), (0.35 + p * 1.6).toFixed(2));
+  }).join('');
+  const dust = Array.from({ length: 26 }, (_, i) => {
+    const x = rnd(i) * 1200 - 60, y = 470 + rnd(i + 5) * 520;
+    return `<circle class="gd-dust" style="animation-delay:${(-rnd(i + 2) * 6).toFixed(2)}s"
+      cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1.5 + rnd(i + 7) * 3).toFixed(1)}"
+      fill="#FFE3B0" opacity=".35"/>`;
+  }).join('');
+  const dashes = [0.04, 0.12, 0.23, 0.37, 0.55, 0.78].map((p) => {
+    const y = depthY(p), w = 7 + 30 * p, h = 16 + 78 * p;
+    return `<rect x="${(ROAD_CX - w / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}"
+      height="${h.toFixed(1)}" rx="${(w / 3).toFixed(1)}" fill="#FFF3D6" opacity="${(0.5 + p * 0.4).toFixed(2)}"/>`;
+  }).join('');
+  const coins = [0.1, 0.22, 0.37, 0.56].map((p) => {
+    const y = depthY(p), s = 0.5 + 2.4 * p, x = ROAD_CX + halfW(p) * 0.42;
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})">
+      <circle r="16" fill="url(#dsCoinGlow)"/><ellipse rx="8" ry="9.5" fill="#FFC83D"/>
+      <ellipse rx="3" ry="8" fill="#FFE9A8"/></g>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 1090 992" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#160C30"/><stop offset=".4" stop-color="#5E2350"/>
+        <stop offset=".74" stop-color="#B8452A"/><stop offset="1" stop-color="#D98443"/>
+      </linearGradient>
+      <linearGradient id="dsRoad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#4A3122"/><stop offset="1" stop-color="#1C120D"/>
+      </linearGradient>
+      <radialGradient id="dsSun"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".9"/>
+        <stop offset="1" stop-color="#FFB35C" stop-opacity="0"/></radialGradient>
+      <radialGradient id="dsCoinGlow"><stop offset="0" stop-color="#FFC83D" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#FFC83D" stop-opacity="0"/></radialGradient>
+      <radialGradient id="dsTail"><stop offset="0" stop-color="#FF2E4D" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#FF2E4D" stop-opacity="0"/></radialGradient>
+      <clipPath id="dsRoadClip"><path d="M400 470 L640 470 L1185 992 L-145 992 Z"/></clipPath>
+    </defs>
+    <rect width="1090" height="992" fill="url(#dsSky)"/>
+    <circle cx="520" cy="470" r="170" fill="url(#dsSun)"/>
+    <circle cx="520" cy="456" r="46" fill="#FFD98A"/>
+    <rect x="0" y="470" width="1090" height="522" fill="#9C5F35"/>
+    ${dunes}
+    <path d="M400 470 L640 470 L1185 992 L-145 992 Z" fill="url(#dsRoad)"/>
+    <path d="M396 470 L400 470 L-145 992 L-172 992 Z" fill="#C08A55" opacity=".9"/>
+    <path d="M640 470 L644 470 L1212 992 L1185 992 Z" fill="#C08A55" opacity=".9"/>
+    ${dashes}
+    ${cacti}
+    ${coins}
+    <g class="gd-cop">
+      <ellipse cx="0" cy="46" rx="66" ry="10" fill="#000" opacity=".4"/>
+      <rect x="-58" y="-16" width="116" height="52" rx="12" fill="#241A16"/>
+      <rect x="-40" y="-40" width="80" height="30" rx="9" fill="#2E211B"/>
+      <rect x="-26" y="-52" width="52" height="12" rx="5" fill="#141420"/>
+      <rect class="gd-flash-b" x="-26" y="-52" width="24" height="12" rx="5" fill="#3B82F6"/>
+      <rect class="gd-flash-r" x="2" y="-52" width="24" height="12" rx="5" fill="#EF4444"/>
+      <rect x="-52" y="18" width="18" height="9" rx="4" fill="#FF6B6B"/>
+      <rect x="34" y="18" width="18" height="9" rx="4" fill="#FF6B6B"/>
+    </g>
+    <g class="gd-player">
+      <ellipse cx="0" cy="92" rx="128" ry="18" fill="#000" opacity=".4"/>
+      <ellipse cx="-92" cy="24" rx="70" ry="46" fill="url(#dsTail)" opacity=".5"/>
+      <ellipse cx="92" cy="24" rx="70" ry="46" fill="url(#dsTail)" opacity=".5"/>
+      <rect x="-118" y="-24" width="236" height="104" rx="22" fill="#1D1712"/>
+      <rect x="-86" y="-74" width="172" height="60" rx="16" fill="#2A211A"/>
+      <rect x="-72" y="-64" width="144" height="38" rx="10" fill="#5A4433" opacity=".8"/>
+      <rect x="-104" y="8" width="72" height="16" rx="8" fill="#FF2E4D"/>
+      <rect x="32" y="8" width="72" height="16" rx="8" fill="#FF2E4D"/>
+      <rect x="-30" y="44" width="60" height="20" rx="5" fill="#F2C94C"/>
+      <rect x="-134" y="46" width="26" height="34" rx="8" fill="#0B0A10"/>
+      <rect x="108" y="46" width="26" height="34" rx="8" fill="#0B0A10"/>
+    </g>
+    ${dust}
+  </svg>`;
+}
+
+// ── @mentions ─────────────────────────────────────────────────────
+const MENTIONS = { artist: 'art', developer: 'dev', dev: 'dev', tester: 'test' };
+
+function parseMention(text) {
+  const m = text.match(/^@(\w+)\s*(.*)$/);
+  if (!m) return null;
+  const key = MENTIONS[m[1].toLowerCase()];
+  if (!key) return null;
+  return { agent: CREW.find((c) => c.key === key), ask: m[2].trim() };
+}
+
+// Sending an agent in directly: they take the note, do the pass, and report back.
+async function runMention(text) {
+  const hit = parseMention(text);
+  if (!hit) return false;
+  const c = hit.agent;
+  busy = true;
+  setSend('busy');
+  push(el('div', 'msg msg--user', text));
+  const build = document.getElementById('build');
+
+  await wait(500);
+  setAgent(c.key, 'working', hit.ask || 'On it…');
+  setStatus(`${c.name} is on it…`, false);
+  agentSay(c, `On it — ${hit.ask || 'taking a look'}.`);
+  await wait(900);
+
+  const wantsDesert = /desert|沙漠|dune/i.test(hit.ask);
+  if (c.key === 'art' && wantsDesert && build) {
+    readLine('Artist Wana: repainting the world…');
+    build.classList.add('is-desert');
+    await wait(1800);
+    readLine('World dressed: Desert dusk — dunes and low sun ✓');
+    setStatus('Desert dusk — your call', false);
+    setAgent(c.key, 'done', 'Desert dusk is in');
+    agentSay(c, 'Swapped New York for a desert at dusk — dunes, cacti, low sun. The chase reads better against the open sand.');
+  } else {
+    readLine(`${c.name}: ${hit.ask || 'pass'} ✓`);
+    setAgent(c.key, 'done', hit.ask || 'Updated');
+    agentSay(c, 'Done — take a look.');
+  }
+  input.placeholder = 'Tell Wana what to change…';
+  setSend('disabled');
+  busy = false;
+  return true;
+}
+
+// A tip is only useful next to the thing it unlocks.
+function mentionTip() {
+  const tip = push(el('div', 'tip',
+    `<span class="tip__k">@</span>
+     <span>Send a Wana in directly — type <b>@Artist</b>, <b>@Developer</b> or <b>@Tester</b>.</span>`));
+  const chips = push(el('div', 'replies'));
+  const b = el('button', 'reply reply--go', '@Artist make it a desert instead');
+  b.onclick = () => { chips.remove(); tip.remove(); runMention('@Artist make it a desert instead'); };
+  chips.appendChild(b);
 }
