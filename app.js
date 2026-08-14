@@ -1874,6 +1874,10 @@ function mountStudio() {
   s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
   mountPreviewGame();
   wirePreview();
+  mountTasks();
+  mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
+  JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
+  paintOverall();
   showTab('preview');
   return s;
 }
@@ -2242,8 +2246,6 @@ if (QUERY.includes('studio')) {
   mountStudio();
   const t = (QUERY.match(/tab=(\w+)/) || [])[1];
   if (t) {
-    mountTasks(); mountPreviewGame();
-    mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
     // a snapshot mid-build, so every state is visible at once
     setMember('developer', 'done', 'Core loop wired');   setProgress('developer', 100);
     setMember('artist', 'working', 'Neon pass');          setProgress('artist', 72);
