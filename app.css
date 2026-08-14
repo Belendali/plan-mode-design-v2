@@ -792,3 +792,31 @@ body{
 .tier__feats li{position:relative;padding-left:22px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.72)}
 .tier__feats li::before{content:'✓';position:absolute;left:0;top:0;color:var(--lime);font-size:12px}
 .tier--free .tier__feats li::before{color:rgba(255,255,255,.5)}
+
+/* ── Pricing scrim ────────────────────────────────────────────────── */
+.pay__veil{
+  position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:10;
+  background:rgba(8,6,8,.55);
+  backdrop-filter:blur(16px) saturate(.85);-webkit-backdrop-filter:blur(16px) saturate(.85);
+  opacity:0;transition:opacity .28s ease;
+}
+.pay__veil.is-on{opacity:1}
+.pay{z-index:11}
+
+/* ── The plan bar states what building it costs ───────────────────── */
+.doc__bar.is-locked{
+  background:linear-gradient(180deg,rgba(22,20,15,0),rgba(30,20,12,.97) 42%,#1E140C);
+  border-top-color:rgba(255,138,61,.35);
+}
+.doc__barnote--lock{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.72)}
+.lockdot{
+  width:8px;height:8px;border-radius:50%;background:#FF8A3D;flex:none;
+  box-shadow:0 0 0 3px rgba(255,138,61,.2);
+}
+
+/* the right frame is aspiration, so it reads a shade cooler than the deliverable */
+.compare__half:last-of-type figcaption{background:rgba(0,0,0,.62);color:rgba(255,255,255,.72)}
+.compare__half:first-of-type figcaption{border:1px solid rgba(192,240,0,.45)}
+
+/* the demo control belongs to the stage, not to whatever is layered over it */
+#stage.has-overlay .trialflag{opacity:0;pointer-events:none;transition:opacity .2s}

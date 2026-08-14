@@ -374,7 +374,11 @@ function screenPlan() {
 // wall goes, once the user has seen what they'd be paying for.
 function startBuild() {
   const doc = document.getElementById('plan-doc');
-  if (doc) { doc.classList.remove('is-on'); setTimeout(() => doc.remove(), 320); }
+  if (doc) {
+    doc.classList.remove('is-on');
+    document.getElementById('stage').classList.remove('has-overlay');
+    setTimeout(() => doc.remove(), 320);
+  }
   if (trial.spent) { openPaywall(() => setTimeout(screenBuild, 300)); return; }
   screenBuild();
 }
@@ -390,7 +394,8 @@ const CREW = [
     lines: ['Developer Wana: reading Game Plan 1.0…',
             'Core loop wired: drive · outrun · coin score ✓'],
     ready: 'Core loop is in — drive, outrun, coin score',
-    review: "Developer Wana finished the core loop — drive, outrun, coin score. Take a look: does it play the way you pictured? Tell me what to change, or say go and I'll bring the Artist in.",
+    review: "Core loop's in — drive, outrun, coin score. Take it for a spin: does it play the way you pictured? Tell me what to change, or say go and I'll hand over to the Artist.",
+    again: "Had another pass at it. Better? Say go when you're happy.",
     revising: 'Reworking the loop',
     recap: 'Core loop wired: drive · outrun · coin score ✓',
   },
@@ -401,7 +406,8 @@ const CREW = [
     lines: ['Artist Wana: mixing the palette…',
             'World dressed: Night NY — neon and rain ✓'],
     ready: 'Night NY is dressed — neon and rain',
-    review: 'Artist Wana dressed the city — night, neon, wet streets. Have a look: anything you want different? Tell me here, or say go.',
+    review: "I've dressed the city — night, neon, wet streets. How does it look to you? Anything you want different, tell me. Otherwise say go and I'll pass it to Tester.",
+    again: 'Repainted it. Closer to what you had in mind?',
     revising: 'Repainting the street',
     recap: 'World dressed: Night NY — neon and rain ✓',
   },
@@ -412,7 +418,8 @@ const CREW = [
     lines: ['Tester Wana: first run started…',
             'Start → chase → escape: all good ✓'],
     ready: 'Full run passed — start → chase → escape',
-    review: "Tester Wana drove it start to finish and it holds up. Last check before I call it version 1 — anything to fix? Otherwise say go.",
+    review: "I drove it start to finish and it holds up. Last look before we call it version 1 — anything feel off? Otherwise say go.",
+    again: 'Ran it again. Any better?',
     revising: 'Re-running the chase',
     recap: 'Start → chase → escape: all good ✓',
   },
@@ -755,9 +762,8 @@ async function screenBuild() {
 // the agent does a revision pass and asks again.
 function review(c, again) {
   return new Promise((resolve) => {
-    const ask = plannerSay(again
-      ? `Updated — ${c.name} had another pass. Better? Say go when you're happy.`
-      : c.review);
+    // the Wana who did the work is the one who asks about it
+    const ask = agentSay(c, again ? c.again : c.review);
     const chip = push(el('div', 'replies',
       '<button class="reply reply--go">Looks good — continue</button>'));
     input.placeholder = 'Tell Wana what to change, or say “go”…';
@@ -776,7 +782,6 @@ function review(c, again) {
       change: async (note) => {
         awaitingReview = null;
         chip.remove();
-        ask.classList.remove('crewmsg--planner');
         push(el('div', 'msg msg--user', note));
         setAgent(c.key, 'working', c.revising + '…');
         setStatus(c.revising + '…', false);
@@ -806,7 +811,7 @@ function tryDemo() {
   const recaps = CREW.map((c) => ({ gif: c.gif, name: c.name, text: c.recap }));
   recaps.push({
     gif: 'assets/wana-plan.gif', name: 'Planner Wana', planner: true,
-    text: "Version 1 is yours. Want anything changed? Tell me here and I'll update the plan, or send the right Wana back in.",
+    text: "Go give it a drive. Anything you want changed once you've played it, just say so — @ me and I'll rework the plan, or @ whoever owns that bit and they'll fix it directly.",
   });
   recaps.forEach((r, i) => setTimeout(() => {
     push(el('div', 'crewmsg' + (r.planner ? ' crewmsg--planner' : ''),
@@ -1012,11 +1017,11 @@ function planDoc() {
         <div class="compare">
           <figure class="compare__half">
             <img src="assets/card-a.jpg" alt="">
-            <figcaption>Blockout · now</figcaption>
+            <figcaption>Version 1.0 — what this plan builds</figcaption>
           </figure>
           <figure class="compare__half">
             <img src="assets/card-b.jpg" alt="">
-            <figcaption>Version 1.0 · target</figcaption>
+            <figcaption>Final version — where it can get to, with more passes</figcaption>
           </figure>
           <span class="compare__seam"></span>
         </div>
@@ -1085,21 +1090,50 @@ function planDoc() {
     </div>
   `;
   const bar = el('div', 'doc__bar');
-  bar.innerHTML = `
-    <span class="doc__barnote">Read the plan — you approve before anything gets built.</span>
-    <span class="doc__baracts">
-      <button class="btn-quiet" id="doc-change">I want to change something</button>
-      <button class="btn-brand" id="doc-approve">Approve &amp; build</button>
-    </span>`;
+  bar.id = 'doc-bar';
   wrap.appendChild(bar);
 
-  document.getElementById('stage').appendChild(wrap);
+  const stage = document.getElementById('stage');
+  stage.appendChild(wrap);
+  stage.classList.add('has-overlay');
+  paintDocBar();
   requestAnimationFrame(() => wrap.classList.add('is-on'));
-  const close = () => { wrap.classList.remove('is-on'); setTimeout(() => wrap.remove(), 320); };
+  const close = () => {
+    wrap.classList.remove('is-on');
+    stage.classList.remove('has-overlay');
+    setTimeout(() => wrap.remove(), 320);
+  };
   wrap.querySelector('#doc-close').onclick = close;
-  wrap.querySelector('#doc-change').onclick = close;
-  wrap.querySelector('#doc-approve').onclick = () => { close(); startBuild(); };
   return wrap;
+}
+
+// The plan is always free to read. What it costs is stated where the
+// decision is made, so nobody gets surprised one click later.
+function paintDocBar() {
+  const bar = document.getElementById('doc-bar');
+  if (!bar) return;
+  bar.classList.toggle('is-locked', trial.spent);
+  bar.innerHTML = trial.spent
+    ? `<span class="doc__barnote doc__barnote--lock">
+         <i class="lockdot"></i>Your free run is used — building this plan needs Pro.
+       </span>
+       <span class="doc__baracts">
+         <button class="btn-quiet" id="doc-change">I want to change something</button>
+         <button class="btn-brand" id="doc-approve">Upgrade to build</button>
+       </span>`
+    : `<span class="doc__barnote">Read the plan — you approve before anything gets built.</span>
+       <span class="doc__baracts">
+         <button class="btn-quiet" id="doc-change">I want to change something</button>
+         <button class="btn-brand" id="doc-approve">Approve &amp; build</button>
+       </span>`;
+  const wrap = document.getElementById('plan-doc');
+  const close = () => {
+    wrap.classList.remove('is-on');
+    document.getElementById('stage').classList.remove('has-overlay');
+    setTimeout(() => wrap.remove(), 320);
+  };
+  bar.querySelector('#doc-change').onclick = close;
+  bar.querySelector('#doc-approve').onclick = () => { close(); startBuild(); };
 }
 
 function openPlanDoc() {
@@ -1280,6 +1314,7 @@ function paintTrial() {
   if (el2) {
     el2.classList.toggle('is-spent', trial.spent);
     el2.querySelector('b').textContent = trial.spent ? 'used' : 'available';
+    paintDocBar();
     el2.title = trial.spent
       ? 'Demo control — free run is spent, so Approve & build hits the paywall'
       : 'Demo control — free run is available, so Approve & build goes straight to work';
@@ -1338,11 +1373,21 @@ function openPaywall(onUpgrade) {
       </div>
     </div>
   `;
-  document.getElementById('stage').appendChild(w);
-  requestAnimationFrame(() => w.classList.add('is-on'));
-  const close = () => { w.classList.remove('is-on'); setTimeout(() => w.remove(), 280); };
+  const veil = el('div', 'pay__veil');
+  veil.id = 'pay-veil';
+  const stage = document.getElementById('stage');
+  stage.appendChild(veil);
+  stage.appendChild(w);
+  stage.classList.add('has-overlay');
+  requestAnimationFrame(() => { veil.classList.add('is-on'); w.classList.add('is-on'); });
+  const close = () => {
+    w.classList.remove('is-on'); veil.classList.remove('is-on');
+    stage.classList.remove('has-overlay');
+    setTimeout(() => { w.remove(); veil.remove(); }, 280);
+  };
   w.querySelector('.pay__x').onclick = close;
   w.querySelector('.pay__back').onclick = close;
+  veil.onclick = close;
   w.querySelectorAll('.tier__cta--pro, .tier__cta--max').forEach((b) => {
     b.onclick = () => { close(); trial.spent = false; paintTrial(); onUpgrade && onUpgrade(); };
   });
