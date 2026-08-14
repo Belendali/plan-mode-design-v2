@@ -657,9 +657,15 @@ body{
 .risk__m{font-size:13px;color:rgba(255,255,255,.6)}
 
 /* ── @Artist swaps the world ──────────────────────────────────────── */
-.build__desert{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 1.6s ease}
-.build__desert svg{width:100%;height:100%;display:block}
-.build.is-desert .build__desert{opacity:1}
+/* Each layer arrives as its own task completes */
+.build__ds{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .85s ease}
+.build__ds svg{width:100%;height:100%;display:block}
+.build.is-ds-sky     .build__ds--sky{opacity:1}
+.build.is-ds-light   .build__ds--light{opacity:1}
+.build.is-ds-terrain .build__ds--terrain{opacity:1}
+.build.is-ds-road    .build__ds--road{opacity:1}
+/* the night city steps aside as soon as the sky is replaced */
+.build.is-ds-sky .build__art{opacity:0}
 .gd-dust{animation:gdDust 7s ease-in-out infinite}
 @keyframes gdDust{0%,100%{transform:translate(0,0);opacity:.15}50%{transform:translate(-26px,-14px);opacity:.5}}
 
@@ -820,3 +826,34 @@ body{
 
 /* the demo control belongs to the stage, not to whatever is layered over it */
 #stage.has-overlay .trialflag{opacity:0;pointer-events:none;transition:opacity .2s}
+
+/* ── Sub-task checklist inside the panel ──────────────────────────── */
+.subtasks{
+  margin-top:8px;padding:10px;border-radius:11px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  display:flex;flex-direction:column;gap:2px;
+  animation:rise .3s cubic-bezier(.2,.8,.3,1) both;
+}
+.subtasks__head{
+  display:flex;align-items:center;gap:7px;padding:0 4px 7px;
+  font-size:11px;color:var(--text-mute);
+}
+.subtasks__head i{
+  width:6px;height:6px;border-radius:50%;background:#ff8a3d;flex:none;
+  animation:pulse 1.1s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.subtask{
+  display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:7px;
+  font-size:11.5px;line-height:1.4;color:var(--text-mute);opacity:.55;transition:all .3s;
+}
+.subtask__dot{
+  width:11px;height:11px;border-radius:50%;flex:none;
+  border:1.5px solid rgba(255,255,255,.28);display:grid;place-items:center;
+  font-size:7px;font-weight:700;color:#141414;
+}
+.subtask.is-running{opacity:1;color:#fff}
+.subtask.is-running .subtask__dot{border-color:#ff8a3d;border-top-color:transparent;animation:spin .8s linear infinite}
+.subtask.is-done{opacity:.85;color:var(--text-dim)}
+.subtask.is-done .subtask__dot{background:var(--lime);border-color:var(--lime);animation:none}
+.subtask.is-done .subtask__dot::after{content:'✓'}

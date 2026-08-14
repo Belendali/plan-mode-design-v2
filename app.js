@@ -656,7 +656,10 @@ function mountBuild() {
   build.id = 'build';
   build.innerHTML = `
     <div class="build__art">${citySVG()}</div>
-    <div class="build__desert">${desertSVG()}</div>
+    <div class="build__ds build__ds--sky">${desertSky()}</div>
+    <div class="build__ds build__ds--light">${desertLight()}</div>
+    <div class="build__ds build__ds--terrain">${desertTerrain()}</div>
+    <div class="build__ds build__ds--road">${desertRoad()}</div>
     <div class="build__wire">${wireframeSVG()}</div>
     <div class="build__hud">
       <div class="hud hud--time"><small>TIME</small>02:45</div>
@@ -674,15 +677,38 @@ function mountBuild() {
           </span>
           <span class="agent__state" id="state-${c.key}"></span>
         </div>`).join('')}
+      <div class="subtasks" id="subtasks" hidden></div>
       <button class="miniplan__try" id="mini-try">▶&nbsp;&nbsp;Try demo</button>
     </div>
   `;
   document.getElementById('stage').appendChild(build);
   // ?clean — hide the overlaid UI so the viewport can be captured as a plate
   if (QUERY.includes('clean')) build.classList.add('is-clean');
-  requestAnimationFrame(() => build.classList.add('is-on'));
+  build.classList.add('is-on');
   document.getElementById('mini-try').onclick = tryDemo;
   return build;
+}
+
+// The panel opens a nested checklist while a Wana works a job, so the pass
+// reads as a sequence rather than one unexplained jump.
+function openSubtasks(owner, steps) {
+  const box = document.getElementById('subtasks');
+  if (!box) return null;
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="subtasks__head"><i></i>${owner}</div>
+    ${steps.map((t, i) => `
+      <div class="subtask" id="st-${i}"><span class="subtask__dot"></span><span>${t}</span></div>`).join('')}
+  `;
+  return box;
+}
+function setSubtask(i, state) {
+  const row = document.getElementById('st-' + i);
+  if (row) row.className = 'subtask is-' + state;
+}
+function closeSubtasks() {
+  const box = document.getElementById('subtasks');
+  if (box) { box.hidden = true; box.innerHTML = ''; }
 }
 
 // state: 'idle' | 'working' | 'review' | 'done'
@@ -1164,7 +1190,41 @@ function cactus(x, y, s) {
     <ellipse cx="0" cy="4" rx="26" ry="6" fill="#000" opacity=".28"/>
   </g>`;
 }
-function desertSVG() {
+function dsDefs() { return `
+  <defs>
+    <linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#160C30"/><stop offset=".4" stop-color="#5E2350"/>
+      <stop offset=".74" stop-color="#B8452A"/><stop offset="1" stop-color="#D98443"/>
+    </linearGradient>
+    <linearGradient id="dsRoad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A3122"/><stop offset="1" stop-color="#1C120D"/>
+    </linearGradient>
+    <radialGradient id="dsSun"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#FFB35C" stop-opacity="0"/></radialGradient>
+    <radialGradient id="dsCoinGlow"><stop offset="0" stop-color="#FFC83D" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#FFC83D" stop-opacity="0"/></radialGradient>
+    <radialGradient id="dsTail"><stop offset="0" stop-color="#FF2E4D" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#FF2E4D" stop-opacity="0"/></radialGradient>
+  </defs>`; }
+function DS_SVG(inner) {
+  return `<svg viewBox="0 0 1090 992" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    ${dsDefs()}${inner}</svg>`;
+}
+
+// 1 · background
+function desertSky() {
+  return DS_SVG(`
+    <rect width="1090" height="992" fill="url(#dsSky)"/>
+    <rect x="0" y="470" width="1090" height="522" fill="#9C5F35"/>`);
+}
+// 2 · light
+function desertLight() {
+  return DS_SVG(`
+    <circle cx="520" cy="470" r="170" fill="url(#dsSun)"/>
+    <circle cx="520" cy="456" r="46" fill="#FFD98A"/>`);
+}
+// 3 · models
+function desertTerrain() {
   const dunes = [0.03, 0.1, 0.2, 0.34, 0.52, 0.76]
     .map((p, i) => dune(i * 2, 0, p) + dune(i * 2 + 1, 1, p)).join('');
   const cacti = [[0.14, 0], [0.3, 1], [0.58, 0], [0.82, 1]].map(([p, side], i) => {
@@ -1172,52 +1232,32 @@ function desertSVG() {
     const x = ROAD_CX + (side ? 1 : -1) * (e + 40 + rnd(i) * 90);
     return cactus(x.toFixed(0), y.toFixed(0), (0.35 + p * 1.6).toFixed(2));
   }).join('');
-  const dust = Array.from({ length: 26 }, (_, i) => {
-    const x = rnd(i) * 1200 - 60, y = 470 + rnd(i + 5) * 520;
-    return `<circle class="gd-dust" style="animation-delay:${(-rnd(i + 2) * 6).toFixed(2)}s"
-      cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1.5 + rnd(i + 7) * 3).toFixed(1)}"
-      fill="#FFE3B0" opacity=".35"/>`;
-  }).join('');
+  return DS_SVG(dunes + cacti);
+}
+// 4 · road, props and the cars back on it
+function desertRoad() {
   const dashes = [0.04, 0.12, 0.23, 0.37, 0.55, 0.78].map((p) => {
     const y = depthY(p), w = 7 + 30 * p, h = 16 + 78 * p;
     return `<rect x="${(ROAD_CX - w / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}"
       height="${h.toFixed(1)}" rx="${(w / 3).toFixed(1)}" fill="#FFF3D6" opacity="${(0.5 + p * 0.4).toFixed(2)}"/>`;
   }).join('');
   const coins = [0.1, 0.22, 0.37, 0.56].map((p) => {
-    const y = depthY(p), s = 0.5 + 2.4 * p, x = ROAD_CX + halfW(p) * 0.42;
-    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})">
+    const y = depthY(p), sc = 0.5 + 2.4 * p, x = ROAD_CX + halfW(p) * 0.42;
+    return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${sc.toFixed(2)})">
       <circle r="16" fill="url(#dsCoinGlow)"/><ellipse rx="8" ry="9.5" fill="#FFC83D"/>
       <ellipse rx="3" ry="8" fill="#FFE9A8"/></g>`;
   }).join('');
-
-  return `<svg viewBox="0 0 1090 992" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="dsSky" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#160C30"/><stop offset=".4" stop-color="#5E2350"/>
-        <stop offset=".74" stop-color="#B8452A"/><stop offset="1" stop-color="#D98443"/>
-      </linearGradient>
-      <linearGradient id="dsRoad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#4A3122"/><stop offset="1" stop-color="#1C120D"/>
-      </linearGradient>
-      <radialGradient id="dsSun"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".9"/>
-        <stop offset="1" stop-color="#FFB35C" stop-opacity="0"/></radialGradient>
-      <radialGradient id="dsCoinGlow"><stop offset="0" stop-color="#FFC83D" stop-opacity=".85"/>
-        <stop offset="1" stop-color="#FFC83D" stop-opacity="0"/></radialGradient>
-      <radialGradient id="dsTail"><stop offset="0" stop-color="#FF2E4D" stop-opacity=".95"/>
-        <stop offset="1" stop-color="#FF2E4D" stop-opacity="0"/></radialGradient>
-      <clipPath id="dsRoadClip"><path d="M400 470 L640 470 L1185 992 L-145 992 Z"/></clipPath>
-    </defs>
-    <rect width="1090" height="992" fill="url(#dsSky)"/>
-    <circle cx="520" cy="470" r="170" fill="url(#dsSun)"/>
-    <circle cx="520" cy="456" r="46" fill="#FFD98A"/>
-    <rect x="0" y="470" width="1090" height="522" fill="#9C5F35"/>
-    ${dunes}
+  const dust = Array.from({ length: 26 }, (_, i) => {
+    const x = rnd(i) * 1200 - 60, y = 470 + rnd(i + 5) * 520;
+    return `<circle class="gd-dust" style="animation-delay:${(-rnd(i + 2) * 6).toFixed(2)}s"
+      cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(1.5 + rnd(i + 7) * 3).toFixed(1)}"
+      fill="#FFE3B0" opacity=".35"/>`;
+  }).join('');
+  return DS_SVG(`
     <path d="M400 470 L640 470 L1185 992 L-145 992 Z" fill="url(#dsRoad)"/>
     <path d="M396 470 L400 470 L-145 992 L-172 992 Z" fill="#C08A55" opacity=".9"/>
     <path d="M640 470 L644 470 L1212 992 L1185 992 Z" fill="#C08A55" opacity=".9"/>
-    ${dashes}
-    ${cacti}
-    ${coins}
+    ${dashes}${coins}
     <g class="gd-cop">
       <ellipse cx="0" cy="46" rx="66" ry="10" fill="#000" opacity=".4"/>
       <rect x="-58" y="-16" width="116" height="52" rx="12" fill="#241A16"/>
@@ -1225,8 +1265,6 @@ function desertSVG() {
       <rect x="-26" y="-52" width="52" height="12" rx="5" fill="#141420"/>
       <rect class="gd-flash-b" x="-26" y="-52" width="24" height="12" rx="5" fill="#3B82F6"/>
       <rect class="gd-flash-r" x="2" y="-52" width="24" height="12" rx="5" fill="#EF4444"/>
-      <rect x="-52" y="18" width="18" height="9" rx="4" fill="#FF6B6B"/>
-      <rect x="34" y="18" width="18" height="9" rx="4" fill="#FF6B6B"/>
     </g>
     <g class="gd-player">
       <ellipse cx="0" cy="92" rx="128" ry="18" fill="#000" opacity=".4"/>
@@ -1241,8 +1279,7 @@ function desertSVG() {
       <rect x="-134" y="46" width="26" height="34" rx="8" fill="#0B0A10"/>
       <rect x="108" y="46" width="26" height="34" rx="8" fill="#0B0A10"/>
     </g>
-    ${dust}
-  </svg>`;
+    ${dust}`);
 }
 
 // ── @mentions ─────────────────────────────────────────────────────
@@ -1266,6 +1303,11 @@ async function runMention(text) {
   push(el('div', 'msg msg--user', text));
   const build = document.getElementById('build');
 
+  const mp = document.getElementById('miniplan');
+  if (mp) mp.classList.remove('is-hidden');
+  const st = document.getElementById('build-status');
+  if (st) st.classList.remove('is-hidden');
+
   await wait(500);
   setAgent(c.key, 'working', hit.ask || 'On it…');
   setStatus(`${c.name} is on it…`, false);
@@ -1274,13 +1316,27 @@ async function runMention(text) {
 
   const wantsDesert = /desert|沙漠|dune/i.test(hit.ask);
   if (c.key === 'art' && wantsDesert && build) {
-    readLine('Artist Wana: repainting the world…');
-    build.classList.add('is-desert');
-    await wait(1800);
-    readLine('World dressed: Desert dusk — dunes and low sun ✓');
+    const STEPS_ART = [
+      { label: 'Swap the sky — night → desert dusk', cls: 'ds-sky',     line: 'Sky swapped: desert dusk ✓' },
+      { label: 'Re-grade the light — low warm sun',  cls: 'ds-light',   line: 'Lighting re-graded: low sun ✓' },
+      { label: 'Build the terrain — dunes & cacti',  cls: 'ds-terrain', line: 'Terrain built: dunes, cacti ✓' },
+      { label: 'Repaint the road & props',           cls: 'ds-road',    line: 'Road repainted: sand and dust ✓' },
+    ];
+    openSubtasks('Artist Wana · reworking the world', STEPS_ART.map((x) => x.label));
+    for (let i = 0; i < STEPS_ART.length; i++) {
+      setSubtask(i, 'running');
+      setStatus(STEPS_ART[i].label + '…', false);
+      await wait(560);
+      build.classList.add('is-' + STEPS_ART[i].cls);
+      await wait(700);
+      setSubtask(i, 'done');
+      readLine(STEPS_ART[i].line);
+    }
+    await wait(500);
+    closeSubtasks();
     setStatus('Desert dusk — your call', false);
     setAgent(c.key, 'done', 'Desert dusk is in');
-    agentSay(c, 'Swapped New York for a desert at dusk — dunes, cacti, low sun. The chase reads better against the open sand.');
+    agentSay(c, 'Swapped New York for a desert at dusk — sky, light, terrain and road all redone. The chase reads better against the open sand.');
   } else {
     readLine(`${c.name}: ${hit.ask || 'pass'} ✓`);
     setAgent(c.key, 'done', hit.ask || 'Updated');
