@@ -379,8 +379,8 @@ function startBuild() {
     document.getElementById('stage').classList.remove('has-overlay');
     setTimeout(() => doc.remove(), 320);
   }
-  if (trial.spent) { openPaywall(() => setTimeout(screenBuild, 300)); return; }
-  screenBuild();
+  if (trial.spent) { openPaywall(() => setTimeout(screenBuildParallel, 300)); return; }
+  screenBuildParallel();
 }
 
 // ── Build phase ───────────────────────────────────────────────────
@@ -960,38 +960,6 @@ fit();
 
 screenStart();
 
-// ?plate=a|b|c — freeze the viewport at one build state, UI hidden, no transitions.
-// Used to export capture plates for the Figma frames.
-const plate = (QUERY.match(/plate=([abc])/) || [])[1];
-if (plate) {
-  clearStart();
-  log.innerHTML = '';
-  const b = mountBuild();
-  b.classList.add('is-clean', 'is-frozen');
-  if (plate !== 'a') b.classList.add('is-art');
-  if (plate === 'c') b.classList.add('is-test');
-}
-
-// ?pay — jump straight to the pricing modal (review / capture)
-if (QUERY.includes('pay')) {
-  STEPS[4][1]();
-  setTimeout(() => openPaywall(), 120);
-}
-
-// ?doc — jump straight to the opened plan document (review / capture)
-if (QUERY.includes('doc')) {
-  STEPS[4][1]();
-  setTimeout(openPlanDoc, 60);
-}
-
-// One-shot deep links for review: #step1 … #step7
-const jump = parseInt((location.hash.match(/^#step(\d)$/) || [])[1], 10);
-if (jump >= 1 && jump <= STEPS.length) {
-  history.replaceState(null, '', location.pathname);
-  if (jump < 6) unmountBuild();
-  STEPS[jump - 1][1]();
-}
-
 // ── Game Dev Plan document ────────────────────────────────────────
 // Structure mirrors the real director plan payload; content is this demo's game.
 const PLAN_DOC = {
@@ -1474,7 +1442,7 @@ function openPaywall(onUpgrade) {
   });
 }
 
-paintTrial();   // `trial` is declared below the init block
+
 
 // ── The way in: wanaka.app → sign in → Studio ─────────────────────
 const SITE = {
@@ -1604,14 +1572,6 @@ async function afterTour(ask) {
   screenPlanningStage();
 }
 
-// ?site / #site — start from wanaka.app, the way a new user arrives
-// ?login jumps straight to the sign-in card over the Studio
-if (QUERY.includes('site') || location.hash === '#site') {
-  clearStart();
-  if (QUERY.includes('login')) screenLogin(SITE.seed);
-  else screenSite();
-}
-
 // ── The crew on stage ─────────────────────────────────────────────
 const CREW6 = [
   { key: 'planner',   name: 'Planner',   role: 'Plans the build' },
@@ -1631,6 +1591,7 @@ function mountCrewStage() {
     <figure class="member" id="mem-${c.key}">
       <img src="assets/crew-${c.key}.webp" alt="">
       <figcaption><b>${c.name}</b><em>${c.role}</em></figcaption>
+      <span class="member__bar"><i class="member__fill"></i></span>
       <span class="member__state">waiting</span>
     </figure>`).join('');
   document.getElementById('stage').appendChild(s);
@@ -1713,4 +1674,191 @@ function startTour(ask, done) {
   };
   paint();
   return t;
+}
+
+// ── Everyone works at once ────────────────────────────────────────
+// Different jobs take different lengths; a Wana that needs a decision stops
+// and asks in chat while the rest keep going.
+const JOBS = [
+  { key: 'developer', name: 'Developer Wana', start: 0, tick: 900,
+    steps: ['Blocking out the streets', 'Wiring drive · outrun', 'Coin scoring + HUD', 'Escape condition'],
+    checkAt: 2,
+    check: "Core loop's in — drive, outrun, coin score. Should the cops learn your route, or stay dumb and fast?",
+    options: ['Let them learn', 'Dumb and fast'],
+    done: 'Core loop wired' },
+  { key: 'artist', name: 'Artist Wana', start: 300, tick: 1150,
+    steps: ['Sky & lighting', 'Buildings and road', 'Wet-road reflections', 'Neon pass'],
+    checkAt: 1,
+    check: "I've mocked the city two ways. Neon night, or golden hour?",
+    options: ['Neon night', 'Golden hour'],
+    done: 'Night NY dressed' },
+  { key: 'audio', name: 'Audio Wana', start: 200, tick: 1000,
+    steps: ['Engine loop', 'Pickup SFX', 'Siren layer', 'Night city bed'],
+    done: 'Sound in' },
+  { key: 'tester', name: 'Tester Wana', start: 1400, tick: 1050,
+    steps: ['First drive', 'Chase balance', 'Full run start → escape'],
+    done: 'Run holds up' },
+  { key: 'marketing', name: 'Marketing Wana', start: 1800, tick: 1250,
+    steps: ['Naming it', 'Cover art', 'Store blurb'],
+    done: 'Getaway Drive · ready to share' },
+];
+
+function crewSay(job, msg, options) {
+  const row = el('div', 'crewmsg');
+  row.innerHTML = `<span class="crewmsg__avatar"><img src="assets/crew-${job.key}.webp" alt=""></span>
+    <span><strong>${job.name}</strong>${msg}</span>`;
+  return push(row);
+}
+
+function askAgent(job) {
+  return new Promise((resolve) => {
+    crewSay(job, job.check);
+    const wrap = push(el('div', 'replies'));
+    job.options.forEach((text, i) => {
+      const b = el('button', 'reply' + (i === 0 ? ' reply--go' : ''), text);
+      b.onclick = () => {
+        wrap.remove();
+        push(el('div', 'msg msg--user', text));
+        resolve(text);
+      };
+      wrap.appendChild(b);
+    });
+    scrollDown();
+  });
+}
+
+async function runJob(job, build) {
+  const n = job.steps.length;
+  await wait(job.start);
+  for (let i = 0; i < n; i++) {
+    setMember(job.key, 'working', job.steps[i]);
+    setProgress(job.key, Math.round((i / n) * 100));
+    await wait(job.tick);
+    if (job.checkAt === i) {
+      setMember(job.key, 'review', 'needs your call');
+      setProgress(job.key, Math.round(((i + 1) / n) * 100));
+      const pick = await askAgent(job);
+      if (job.key === 'artist' && /golden/i.test(pick) && build) build.classList.add('is-golden');
+      if (job.key === 'developer') job.twist = pick;
+      setMember(job.key, 'working', job.steps[i]);
+    }
+  }
+  setProgress(job.key, 100);
+  setMember(job.key, 'done', job.done);
+}
+
+function setProgress(key, pct) {
+  const bar = document.querySelector(`#mem-${key} .member__fill`);
+  if (bar) bar.style.width = pct + '%';
+}
+
+async function screenBuildParallel() {
+  busy = true;
+  setSend('busy');
+  clearStart();
+  log.innerHTML = '';
+  perch.style.opacity = '0';
+  switchEl.classList.add('is-on');
+  input.placeholder = 'Click Stop to cancel…';
+
+  const build = mountBuild();
+  build.classList.add('is-art');
+  // the crew on the floor replaces the little side panel entirely
+  const mp = document.getElementById('miniplan');
+  if (mp) mp.remove();
+  const bs = document.getElementById('build-status');
+  if (bs) bs.remove();
+  const stage = mountCrewStage();
+  stage.classList.add('is-lit', 'is-working');
+  setMember('planner', 'lead', 'running the build');
+  setProgress('planner', 100);
+
+  push(el('div', 'msg msg--user', BUILD_PROMPT));
+  await wait(500);
+  agentSay({ name: 'Planner Wana', gif: 'assets/crew-planner.webp' },
+    "All five are on it at once. I'll only interrupt you when someone genuinely needs a call.");
+
+  await Promise.all(JOBS.map((j) => runJob(j, build)));
+
+  build.classList.add('is-test');
+  await wait(400);
+  const sum = el('div', 'summary');
+  sum.innerHTML = `
+    <div class="summary__head">Version 1.0 is built</div>
+    ${JOBS.map((j) => `
+      <div class="summary__row">
+        <span class="summary__who"><img src="assets/crew-${j.key}.webp" alt="">${j.name.replace(' Wana', '')}</span>
+        <span class="summary__what">${j.done}</span>
+        <button class="summary__reply" data-k="${j.key}">Reply</button>
+      </div>`).join('')}
+  `;
+  push(sum);
+  sum.querySelectorAll('.summary__reply').forEach((b) => {
+    b.onclick = () => {
+      const j = JOBS.find((x) => x.key === b.dataset.k);
+      input.value = '@' + j.key + ' ';
+      input.focus();
+      setSend('send');
+    };
+  });
+  agentSay({ name: 'Planner Wana', gif: 'assets/crew-planner.webp' },
+    'Give it a drive. Want any one of them to take another pass? Hit Reply next to their name, or @ them here.');
+  input.placeholder = 'Tell a Wana what to change…';
+  setSend('disabled');
+  busy = false;
+}
+
+
+/* ──────────────────────────────────────────────────────────────────
+   Boot. Everything below runs last on purpose: the screens above are
+   function declarations (hoisted), but their data tables are `const`,
+   so any entry point that touches them has to come after the whole
+   file has evaluated.
+   ────────────────────────────────────────────────────────────────── */
+paintTrial();
+
+// ?build — jump straight to the parallel build (review / capture)
+if (QUERY.includes('build')) {
+  clearStart();
+  screenBuildParallel();
+}
+
+// ?pay — jump straight to the pricing modal (review / capture)
+if (QUERY.includes('pay')) {
+  STEPS[4][1]();
+  setTimeout(() => openPaywall(), 120);
+}
+
+// ?doc — jump straight to the opened plan document (review / capture)
+if (QUERY.includes('doc')) {
+  STEPS[4][1]();
+  setTimeout(openPlanDoc, 60);
+}
+
+// ?plate=a|b|c — freeze the viewport at one build state, UI hidden, no transitions.
+// Used to export capture plates for the Figma frames.
+const plate = (QUERY.match(/plate=([abc])/) || [])[1];
+if (plate) {
+  clearStart();
+  log.innerHTML = '';
+  const b = mountBuild();
+  b.classList.add('is-clean', 'is-frozen');
+  if (plate !== 'a') b.classList.add('is-art');
+  if (plate === 'c') b.classList.add('is-test');
+}
+
+// One-shot deep links for review: #step1 … #step7
+const jump = parseInt((location.hash.match(/^#step(\d)$/) || [])[1], 10);
+if (jump >= 1 && jump <= STEPS.length) {
+  history.replaceState(null, '', location.pathname);
+  if (jump < 6) unmountBuild();
+  STEPS[jump - 1][1]();
+}
+
+// ?site / #site — start from wanaka.app, the way a new user arrives
+// ?login jumps straight to the sign-in card over the Studio
+if (QUERY.includes('site') || location.hash === '#site') {
+  clearStart();
+  if (QUERY.includes('login')) screenLogin(SITE.seed);
+  else screenSite();
 }
