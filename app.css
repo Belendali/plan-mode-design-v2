@@ -98,7 +98,7 @@ body{
 
 /* Chat info strip */
 .chatinfo{
-  position:absolute;left:12px;top:80px;width:501px;height:44px;z-index:6;
+  position:absolute;left:12px;top:12px;width:501px;height:44px;z-index:6;
   display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:10px;
   background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
 }
@@ -120,7 +120,7 @@ body{
 
 /* Scrolling chat log */
 .log{
-  position:absolute;left:12px;top:132px;width:501px;bottom:198px;
+  position:absolute;left:12px;top:72px;width:501px;bottom:198px;
   overflow-y:auto;overflow-x:hidden;
   display:flex;flex-direction:column;align-items:stretch;gap:16px;
   padding:4px 0 24px;
@@ -128,7 +128,7 @@ body{
 }
 .log::-webkit-scrollbar{display:none}
 .log__fade-top{
-  position:absolute;left:0;right:0;top:124px;height:24px;z-index:4;pointer-events:none;
+  position:absolute;left:0;right:0;top:64px;height:24px;z-index:4;pointer-events:none;
   background:linear-gradient(180deg,var(--panel-bg) 0%,rgba(20,14,16,0) 100%);
 }
 
@@ -1285,7 +1285,7 @@ body{
 
 /* ── Crew ───────────────────────────────────────────────────────────── */
 .pane--crew{display:flex;flex-direction:column}
-.crewwrap{flex:1;min-height:0;display:flex;gap:22px}
+.crewwrap{flex:1;min-height:0;display:flex;gap:22px;padding-bottom:6px}
 .tasks{
   width:300px;flex:none;padding:14px;border-radius:14px;overflow-y:auto;scrollbar-width:none;
   background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
@@ -1412,3 +1412,74 @@ body{
   background:var(--lime);color:#141414;font-family:var(--font);font-size:14px;font-weight:600;
 }
 .asset__thumb{background-size:cover;background-position:center}
+
+
+/* ── Preview — the game running ──────────────────────────────────── */
+.pv-bld,.pv-dash,.pv-coin,.pv-streak{animation-iteration-count:infinite;animation-timing-function:linear}
+.pv-bld{animation-name:pvRun}
+.pv-dash{animation-name:pvRunFlat}
+.pv-coin{animation-name:pvRunCoin}
+.pv-streak{animation-name:pvRunFlat;opacity:.45}
+@keyframes pvRun{
+  from{transform:translate(0,0) scale(.12);opacity:0}
+  12%{opacity:1}
+  to{transform:translate(var(--dx),var(--dy)) scale(2.4);opacity:1}
+}
+@keyframes pvRunFlat{
+  from{transform:translate(0,0) scale(.3);opacity:0}
+  14%{opacity:1}
+  to{transform:translate(var(--dx),var(--dy)) scale(3.4);opacity:1}
+}
+@keyframes pvRunCoin{
+  from{transform:translate(0,0) scale(.2);opacity:0}
+  16%{opacity:1}
+  to{transform:translate(var(--dx),var(--dy)) scale(2.6);opacity:1}
+}
+.pv-car{animation:pvSway 4.6s ease-in-out infinite}
+@keyframes pvSway{0%,100%{transform:translate(545px,620px)}50%{transform:translate(559px,616px)}}
+
+/* in-game HUD */
+.hud2{position:absolute;left:0;right:0;top:20px;z-index:3;display:flex;align-items:flex-start;
+  justify-content:space-between;padding:0 28px;pointer-events:none}
+.hud2 b{font-family:var(--font-mono);font-size:26px;color:#fff;display:block;line-height:1.1}
+.hud2 i{font-style:normal;font-family:var(--font-mono);font-size:13px;color:rgba(255,255,255,.5)}
+.hud2__k{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.55)}
+.hud2__l,.hud2__c,.hud2__r{padding:9px 16px;border-radius:13px;background:rgba(8,6,12,.5);
+  border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(8px);text-align:center}
+.hud2__c b{color:#FFC83D;display:inline-block;margin-right:5px}
+.hud2__cops{position:absolute;right:28px;bottom:24px;z-index:3;display:flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:13px;background:rgba(8,6,12,.5);border:1px solid rgba(255,255,255,.12);
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;color:rgba(255,255,255,.55);pointer-events:none}
+.hud2__cops i{width:9px;height:9px;border-radius:2px;background:#FF3B5C;display:block;
+  box-shadow:0 0 8px rgba(255,59,92,.7)}
+.hud2__cops i.off{background:rgba(255,255,255,.16);box-shadow:none}
+/* the menu clears out once you press Play */
+.pv__frame.is-playing .pv__menu,.pv__frame.is-playing .pv__made{opacity:0;pointer-events:none;
+  transition:opacity .4s}
+.pv__menu,.pv__made{transition:opacity .4s}
+
+/* the cops readout moves clear of the Wanaka badge */
+.hud2__cops{right:auto;left:28px}
+
+/* ── Crew office ─────────────────────────────────────────────────── */
+.pane__head--crew{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.overall{width:300px;flex:none;text-align:right}
+.overall__bar{height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:6px}
+.overall__bar i{display:block;height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,var(--lime),#FF8A3D);transition:width .6s cubic-bezier(.2,.8,.3,1)}
+.overall__txt{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.5)}
+.office{position:relative;flex:1;min-width:0;border-radius:16px;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 12%,#241C2C 0%,#141019 60%,#0F0C13 100%);
+  border:1px solid rgba(255,255,255,.08)}
+.office__room{position:absolute;inset:0}
+/* floor line + a couple of warm lamps, so they are standing somewhere */
+.office__room::before{
+  content:'';position:absolute;left:0;right:0;bottom:31%;height:1px;background:rgba(255,255,255,.1);
+}
+.office__room::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:31%;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));
+}
+.office .crewfloor{position:absolute;inset:0;padding-bottom:8%}
+.pane--crew{overflow:hidden}
+.pane--crew .crewwrap{height:100%}

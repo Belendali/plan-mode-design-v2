@@ -100,7 +100,7 @@ stage.innerHTML = `
     <div class="panel__glow"><img src="assets/bg-ellipses.svg" alt=""></div>
 
     <div class="chatinfo chatinfo--top">
-      <div class="chatinfo__name"><span>Chat name Chat...</span><img src="assets/chevron.svg" alt=""></div>
+      <div class="chatinfo__name"><span>NYC Getaway Drive</span><img src="assets/chevron.svg" alt=""></div>
       <div class="chatinfo__rule"></div>
       <div class="chatinfo__stats">
         <div class="coins"><img src="assets/coin.png" alt=""><b>320</b></div>
@@ -1817,7 +1817,6 @@ async function screenBuildParallel() {
 const TABS = [
   { key: 'preview', label: 'Preview', icon: '▷' },
   { key: 'studio',  label: 'Studio',  icon: '◍' },
-  { key: 'pr',      label: 'PR',      icon: '◆' },
   { key: 'assets',  label: 'Assets',  icon: '▦' },
   { key: 'code',    label: 'Code',    icon: '‹›' },
   { key: 'crew',    label: 'Crew',    icon: '☰' },
@@ -1866,7 +1865,6 @@ function mountStudio() {
     <div class="views" id="views">
       <section class="view view--preview" data-view="preview">${previewView()}</section>
       <section class="view view--studio" data-view="studio">${studioView()}</section>
-      <section class="view view--pr" data-view="pr">${prView()}</section>
       <section class="view view--assets" data-view="assets">${assetsView()}</section>
       <section class="view view--code" data-view="code">${codeView()}</section>
       <section class="view view--crew" data-view="crew">${crewView()}</section>
@@ -1875,6 +1873,7 @@ function mountStudio() {
   document.getElementById('stage').insertBefore(s, document.querySelector('.panel'));
   s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
   mountPreviewGame();
+  wirePreview();
   showTab('preview');
   return s;
 }
@@ -1947,8 +1946,9 @@ function previewView() {
           <button title="Reload">⟳</button><button title="Open">↗</button><button title="Fullscreen">⤢</button>
         </span>
       </header>
-      <div class="pv__frame">
+      <div class="pv__frame" id="pv-frame">
         <div class="pv__game" id="pv-game"></div>
+        ${previewHud()}
         <div class="pv__menu">
           <h1>Getaway Drive</h1>
           <p>Outrun five cop cars through a neon Manhattan — grab every coin before they box you in.</p>
@@ -1967,13 +1967,22 @@ function previewView() {
 function crewView() {
   return `
     <div class="pane pane--crew">
-      <div class="pane__head">
-        <h2>Crew</h2>
-        <p id="crew-sub">What everyone is working on right now.</p>
+      <div class="pane__head pane__head--crew">
+        <div>
+          <h2>Crew</h2>
+          <p id="crew-sub">The office — who is on what, and what is still open.</p>
+        </div>
+        <div class="overall">
+          <div class="overall__bar"><i id="overall-fill"></i></div>
+          <span class="overall__txt" id="overall-txt">0 of 0 done</span>
+        </div>
       </div>
       <div class="crewwrap">
         <aside class="tasks" id="tasks"></aside>
-        <div class="crewfloor" id="crewfloor"></div>
+        <div class="office">
+          <div class="office__room"></div>
+          <div class="crewfloor" id="crewfloor"></div>
+        </div>
       </div>
     </div>`;
 }
@@ -1982,17 +1991,50 @@ function crewView() {
 function mountTasks() {
   const box = document.getElementById('tasks');
   if (!box) return;
-  box.innerHTML = '<h3>Tasks · version 1.0</h3>' + JOBS.map((j) =>
+  box.innerHTML = '<h3>Board · version 1.0</h3>' + JOBS.map((j) =>
     j.steps.map((st, i) => `<div class="task" id="task-${j.key}-${i}">
         <span class="task__dot"></span><span>${st}</span></div>`).join('')).join('');
 }
 function setTask(key, i, state) {
   const t = document.getElementById(`task-${key}-${i}`);
   if (t) t.className = 'task is-' + state;
+  paintOverall();
+}
+// one line that answers "how far along is this build?"
+function paintOverall() {
+  const all = document.querySelectorAll('.task');
+  if (!all.length) return;
+  const done = document.querySelectorAll('.task.is-done').length;
+  const ask = document.querySelectorAll('.task.is-review').length;
+  const fill = document.getElementById('overall-fill');
+  const txt = document.getElementById('overall-txt');
+  if (fill) fill.style.width = Math.round((done / all.length) * 100) + '%';
+  if (txt) txt.textContent = `${done} of ${all.length} done` + (ask ? ` · ${ask} waiting on you` : '');
 }
 function mountPreviewGame() {
   const g = document.getElementById('pv-game');
-  if (g && !g.innerHTML) g.innerHTML = citySVG();
+  if (g && !g.innerHTML) g.innerHTML = previewGameSVG();
+}
+// Play hides the menu and lets the numbers run.
+function wirePreview() {
+  const frame = document.getElementById('pv-frame');
+  if (!frame) return;
+  const play = frame.parentElement.querySelector('.pv__play');
+  if (play) play.onclick = () => {
+    frame.classList.add('is-playing');
+    let t = 165, coins = 128;
+    clearInterval(window.__pvTimer);
+    window.__pvTimer = setInterval(() => {
+      t = Math.max(0, t - 1);
+      if (Math.random() > 0.55) coins += 4;
+      const m = String(Math.floor(t / 60)).padStart(2, '0');
+      const sec = String(t % 60).padStart(2, '0');
+      const el1 = document.getElementById('pv-time'); if (el1) el1.textContent = `${m}:${sec}`;
+      const el2 = document.getElementById('pv-coins'); if (el2) el2.textContent = coins;
+      const el3 = document.getElementById('pv-mph');
+      if (el3) el3.textContent = 62 + Math.round(Math.random() * 14);
+    }, 1000);
+  };
 }
 
 
@@ -2093,6 +2135,93 @@ function prView() {
         </div>
       </div>
     </div>`;
+}
+
+
+
+
+// ── Preview — the game actually running ───────────────────────────
+// Everything streams out from the vanishing point, so the car reads as moving.
+function previewGameSVG() {
+  const run = (cls, dx, dy, delay, dur, extra = '') =>
+    `style="--dx:${dx}px;--dy:${dy}px;animation-delay:${delay}s;animation-duration:${dur}s;${extra}"`;
+
+  const towers = [];
+  for (let i = 0; i < 14; i++) {
+    const side = i % 2 ? 1 : -1;
+    const w = 90 + rnd(i) * 70, h = 150 + rnd(i + 9) * 210;
+    const lit = [];
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 3; c++) {
+      if (rnd(i * 31 + r * 7 + c) < .45) continue;
+      lit.push(`<rect x="${18 + c * (w / 3.4)}" y="${16 + r * (h / 9)}" width="${w / 6}" height="${h / 16}"
+        fill="${rnd(i + r + c) > .82 ? '#7FE9FF' : '#FFD98A'}" opacity=".75"/>`);
+    }
+    towers.push(`<g class="pv-bld" ${run('', side * (330 + rnd(i + 3) * 260), 230 + rnd(i + 5) * 90,
+      -(i * 0.42), 5.6)}>
+      <rect x="${-w / 2}" y="${-h}" width="${w}" height="${h}" rx="3" fill="#221B3E"/>
+      <rect x="${-w / 2}" y="${-h}" width="${w * .3}" height="${h}" fill="#181233" opacity=".8"/>
+      <g transform="translate(${-w / 2} ${-h})">${lit.join('')}</g></g>`);
+  }
+  const dashes = Array.from({ length: 9 }, (_, i) =>
+    `<rect class="pv-dash" ${run('', 0, 470, -(i * 0.24), 2.2)} x="-6" y="0" width="12" height="26" rx="5" fill="#F4F2E8"/>`).join('');
+  const coins = Array.from({ length: 6 }, (_, i) =>
+    `<g class="pv-coin" ${run('', (i % 2 ? 1 : -1) * (60 + rnd(i) * 130), 430, -(i * 0.72), 4.3)}>
+       <circle r="16" fill="url(#pvGlow)"/><ellipse rx="9" ry="11" fill="#FFC83D"/>
+       <ellipse rx="3.4" ry="9" fill="#FFE9A8"/></g>`).join('');
+  const streaks = Array.from({ length: 7 }, (_, i) =>
+    `<rect class="pv-streak" ${run('', (i - 3) * 150, 520, -(i * 0.17), 1.1)} x="-2" y="0" width="4" height="34" rx="2" fill="#fff" opacity=".45"/>`).join('');
+
+  return `<svg viewBox="0 0 1090 760" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="pvSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#070617"/><stop offset=".55" stop-color="#22164A"/>
+        <stop offset=".9" stop-color="#7A2A55"/><stop offset="1" stop-color="#A8385F"/>
+      </linearGradient>
+      <linearGradient id="pvRoad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2A2140"/><stop offset="1" stop-color="#0B0913"/>
+      </linearGradient>
+      <radialGradient id="pvGlow"><stop offset="0" stop-color="#FFC83D" stop-opacity=".85"/>
+        <stop offset="1" stop-color="#FFC83D" stop-opacity="0"/></radialGradient>
+      <radialGradient id="pvHaze"><stop offset="0" stop-color="#FF7BB0" stop-opacity=".5"/>
+        <stop offset="1" stop-color="#FF7BB0" stop-opacity="0"/></radialGradient>
+      <radialGradient id="pvTail"><stop offset="0" stop-color="#FF2E4D" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#FF2E4D" stop-opacity="0"/></radialGradient>
+      <clipPath id="pvClip"><rect width="1090" height="760"/></clipPath>
+    </defs>
+    <g clip-path="url(#pvClip)">
+      <rect width="1090" height="760" fill="url(#pvSky)"/>
+      <rect x="0" y="330" width="1090" height="430" fill="#100C22"/>
+      <g transform="translate(545 330)">${towers.join('')}</g>
+      <ellipse cx="545" cy="330" rx="420" ry="120" fill="url(#pvHaze)"/>
+      <path d="M455 330 L635 330 L1180 760 L-90 760 Z" fill="url(#pvRoad)"/>
+      <g transform="translate(545 330)">${dashes}${streaks}${coins}</g>
+
+      <g class="pv-car" transform="translate(545 620)">
+        <ellipse cx="0" cy="86" rx="150" ry="20" fill="#000" opacity=".5"/>
+        <ellipse cx="-104" cy="26" rx="80" ry="50" fill="url(#pvTail)" opacity=".65"/>
+        <ellipse cx="104" cy="26" rx="80" ry="50" fill="url(#pvTail)" opacity=".65"/>
+        <rect x="-132" y="-26" width="264" height="112" rx="24" fill="#15141C"/>
+        <rect x="-96" y="-80" width="192" height="64" rx="17" fill="#1D1C27"/>
+        <rect x="-80" y="-69" width="160" height="41" rx="11" fill="#3A3952" opacity=".78"/>
+        <rect x="-132" y="4" width="264" height="17" rx="8" fill="#0E0D14" opacity=".7"/>
+        <rect x="-116" y="8" width="80" height="17" rx="8" fill="#FF2E4D"/>
+        <rect x="36" y="8" width="80" height="17" rx="8" fill="#FF2E4D"/>
+        <rect x="-34" y="46" width="68" height="22" rx="6" fill="#F2C94C"/>
+        <rect x="-150" y="48" width="28" height="38" rx="9" fill="#0B0A10"/>
+        <rect x="122" y="48" width="28" height="38" rx="9" fill="#0B0A10"/>
+      </g>
+    </g>
+  </svg>`;
+}
+
+function previewHud() {
+  return `
+    <div class="hud2">
+      <div class="hud2__l"><span class="hud2__k">TIME</span><b id="pv-time">02:45</b></div>
+      <div class="hud2__c"><span class="hud2__k">COINS</span><b id="pv-coins">128</b><i>/ 240</i></div>
+      <div class="hud2__r"><b id="pv-mph">68</b><span class="hud2__k">MPH</span></div>
+    </div>
+    <div class="hud2__cops"><span>COPS</span><i></i><i></i><i></i><i class="off"></i><i class="off"></i></div>`;
 }
 
 
