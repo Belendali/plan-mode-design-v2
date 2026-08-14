@@ -671,7 +671,7 @@ function mountBuild() {
       <button class="miniplan__try" id="mini-try">▶&nbsp;&nbsp;Try demo</button>
     </div>
   `;
-  (document.querySelector('.view--game') || document.getElementById('stage')).appendChild(build);
+  (document.getElementById('pv-game') || document.getElementById('stage')).appendChild(build);
   // ?clean — hide the overlaid UI so the viewport can be captured as a plate
   if (QUERY.includes('clean')) build.classList.add('is-clean');
   build.classList.add('is-on');
@@ -1815,23 +1815,26 @@ async function screenBuildParallel() {
 // ── Studio shell ──────────────────────────────────────────────────
 // Five full-height views behind one tab bar. Nothing here is a screenshot.
 const TABS = [
-  { key: 'game',    label: 'Game',    icon: '◍' },
+  { key: 'preview', label: 'Preview', icon: '▷' },
+  { key: 'studio',  label: 'Studio',  icon: '◍' },
+  { key: 'pr',      label: 'PR',      icon: '◆' },
   { key: 'assets',  label: 'Assets',  icon: '▦' },
   { key: 'code',    label: 'Code',    icon: '‹›' },
-  { key: 'preview', label: 'Preview', icon: '▷' },
   { key: 'crew',    label: 'Crew',    icon: '☰' },
 ];
 
 const ASSETS_LIB = [
   { group: '3D Models', by: 'Artist', items: [
-    ['Player car', 'ready'], ['Cop car ×5', 'ready'], ['Block · brownstone', 'ready'],
-    ['Block · storefront', 'ready'], ['Street props', 'building'], ['Coin pickup', 'ready'] ] },
+    ['Player car', 'ready', 'car'], ['Cop car ×5', 'ready', 'cop'], ['Block · brownstone', 'ready', 'block-a'],
+    ['Block · storefront', 'ready', 'block-b'], ['Street props', 'building', 'props'], ['Coin pickup', 'ready', 'coin'] ] },
   { group: 'Materials & Sky', by: 'Artist', items: [
-    ['Wet asphalt', 'ready'], ['Neon signage', 'ready'], ['Night sky preset', 'ready'], ['Rain particles', 'building'] ] },
+    ['Wet asphalt', 'ready', 'asphalt'], ['Neon signage', 'ready', 'neon'],
+    ['Night sky preset', 'ready', 'sky'], ['Rain particles', 'building', 'props'] ] },
   { group: 'Audio', by: 'Audio', items: [
-    ['Engine loop', 'ready'], ['Coin pickup SFX', 'ready'], ['Siren layer', 'ready'], ['Night city bed', 'building'] ] },
+    ['Engine loop', 'ready', 'audio-a'], ['Coin pickup SFX', 'ready', 'audio-b'],
+    ['Siren layer', 'ready', 'audio-c'], ['Night city bed', 'building', 'audio-d'] ] },
   { group: 'UI', by: 'Artist', items: [
-    ['HUD · speed', 'ready'], ['HUD · timer', 'ready'], ['Results screen', 'queued'] ] },
+    ['HUD · speed', 'ready', 'ui-a'], ['HUD · timer', 'ready', 'ui-b'], ['Results screen', 'queued', 'ui-c'] ] },
 ];
 
 const CODE_TREE = ['game.config.ts', 'scenes/NightStreets.ts', 'systems/Drive.ts',
@@ -1861,20 +1864,18 @@ function mountStudio() {
       </div>
     </header>
     <div class="views" id="views">
-      <section class="view view--game" data-view="game"></section>
+      <section class="view view--preview" data-view="preview">${previewView()}</section>
+      <section class="view view--studio" data-view="studio">${studioView()}</section>
+      <section class="view view--pr" data-view="pr">${prView()}</section>
       <section class="view view--assets" data-view="assets">${assetsView()}</section>
       <section class="view view--code" data-view="code">${codeView()}</section>
-      <section class="view view--preview" data-view="preview">${previewView()}</section>
       <section class="view view--crew" data-view="crew">${crewView()}</section>
     </div>
   `;
   document.getElementById('stage').insertBefore(s, document.querySelector('.panel'));
   s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
-  // the Game view is the scene itself, so it is never empty
-  const g = s.querySelector('.view--game');
-  if (!document.getElementById('build')) { const bd = mountBuild(); bd.classList.add('is-art'); }
-  else g.appendChild(document.getElementById('build'));
-  showTab('game');
+  mountPreviewGame();
+  showTab('preview');
   return s;
 }
 
@@ -1898,9 +1899,9 @@ function assetsView() {
             <header><h3>${g.group}</h3><span class="lib__by">
               <img src="assets/crew-${g.by.toLowerCase()}.webp" alt="">${g.by} Wana</span></header>
             <div class="lib__grid">
-              ${g.items.map(([n, st]) => `
+              ${g.items.map(([n, st, th]) => `
                 <article class="asset is-${st}">
-                  <div class="asset__thumb"></div>
+                  <div class="asset__thumb" style="background-image:url('assets/thumb-${th}.jpg')"></div>
                   <span class="asset__name">${n}</span>
                   <span class="asset__state">${st}</span>
                 </article>`).join('')}
@@ -1995,6 +1996,106 @@ function mountPreviewGame() {
 }
 
 
+
+
+// ── Studio — the scene editor ─────────────────────────────────────
+const OUTLINER = [
+  ['Scene 1', 'root', 0],
+  ['Streets', 'group', 1], ['Block A · brownstone', 'mesh', 2], ['Block B · storefront', 'mesh', 2],
+  ['Road mesh', 'mesh', 2], ['Sidewalk props', 'group', 2],
+  ['Actors', 'group', 1], ['Player car', 'mesh sel', 2], ['Cop car ×5', 'group', 2],
+  ['Pickups', 'group', 1], ['Coin ×24', 'mesh', 2],
+  ['Lighting', 'group', 1], ['Night sky', 'light', 2], ['Street lamps ×12', 'light', 2],
+  ['Camera · chase', 'cam', 1],
+];
+
+function studioView() {
+  const grid = Array.from({ length: 22 }, (_, i) =>
+    `<line x1="0" y1="${i * 40}" x2="1000" y2="${i * 40}"/>`).join('') +
+    Array.from({ length: 26 }, (_, i) => `<line x1="${i * 40}" y1="0" x2="${i * 40}" y2="880"/>`).join('');
+  return `
+    <div class="ed">
+      <aside class="ed__tree">
+        <h3>Outliner</h3>
+        ${OUTLINER.map(([n, k, d]) => `
+          <button class="node ${k.split(' ')[0]}${k.includes('sel') ? ' is-sel' : ''}" style="padding-left:${8 + d * 14}px">
+            <i></i>${n}</button>`).join('')}
+      </aside>
+      <div class="ed__vp">
+        <div class="ed__tools">
+          <button class="is-on" title="Select">✥</button><button title="Move">✛</button>
+          <button title="Rotate">⟳</button><button title="Scale">⤢</button>
+          <span class="ed__sep"></span>
+          <button title="Snap">⌗</button><button title="Local space">◲</button>
+        </div>
+        <svg class="ed__grid" viewBox="0 0 1000 880" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <linearGradient id="edFade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0F0C11"/><stop offset="1" stop-color="#0F0C11" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g class="ed__lines" transform="matrix(1,0,0,.42,0,300)">${grid}</g>
+          <rect width="1000" height="360" fill="url(#edFade)"/>
+          <g class="ed__box"><path d="M300 470 L420 440 L420 520 L300 556 Z"/><path d="M420 440 L520 470 L520 548 L420 520 Z"/><path d="M300 470 L420 440 L520 470 L400 500 Z"/></g>
+          <g class="ed__box"><path d="M620 430 L720 404 L720 476 L620 506 Z"/><path d="M720 404 L806 430 L806 500 L720 476 Z"/><path d="M620 430 L720 404 L806 430 L708 456 Z"/></g>
+          <g class="ed__sel">
+            <path d="M430 600 L560 570 L560 640 L430 674 Z"/><path d="M560 570 L672 600 L672 668 L560 640 Z"/>
+            <path d="M430 600 L560 570 L672 600 L546 632 Z"/>
+          </g>
+          <g class="ed__giz" transform="translate(546 616)">
+            <line x1="0" y1="0" x2="132" y2="34" class="gx"/><polygon points="132,26 154,34 132,42" class="gx-f"/>
+            <line x1="0" y1="0" x2="0" y2="-118" class="gy"/><polygon points="-8,-118 0,-140 8,-118" class="gy-f"/>
+            <line x1="0" y1="0" x2="-124" y2="32" class="gz"/><polygon points="-124,24 -146,32 -124,40" class="gz-f"/>
+            <circle r="6" class="gc"/>
+          </g>
+        </svg>
+        <div class="ed__inspector">
+          <h3>Player car</h3>
+          <div class="prop"><span>Position</span><b>0.00</b><b>0.35</b><b>-4.20</b></div>
+          <div class="prop"><span>Rotation</span><b>0.00</b><b>180.0</b><b>0.00</b></div>
+          <div class="prop"><span>Scale</span><b>1.00</b><b>1.00</b><b>1.00</b></div>
+          <div class="prop prop--pick"><span>Material</span><em>Car paint · black</em></div>
+          <div class="prop prop--pick"><span>Collider</span><em>Box · kinematic</em></div>
+        </div>
+        <div class="ed__hud"><span>Perspective</span><span>·</span><span>24 objects</span><span>·</span><span>60 fps</span></div>
+      </div>
+    </div>`;
+}
+
+// ── PR — what Marketing shipped ───────────────────────────────────
+function prView() {
+  return `
+    <div class="pane pane--pr">
+      <div class="pane__head">
+        <h2>PR</h2>
+        <p>Everything Marketing Wana made to put this in front of people.</p>
+      </div>
+      <div class="pr">
+        <figure class="pr__cover">
+          <img src="assets/game-cover.jpg" alt="">
+          <figcaption>Key art · 1920×1080<span>ready</span></figcaption>
+        </figure>
+        <div class="pr__side">
+          <section class="pr__card">
+            <h3>Store copy</h3>
+            <p class="pr__title">Getaway Drive</p>
+            <p class="pr__blurb">Outrun five cop cars through a neon Manhattan. Grab every coin
+              before they box you in — the longer you run, the better they learn your route.</p>
+            <span class="pr__tags"><i>Arcade</i><i>Driving</i><i>Single player</i><i>3 min runs</i></span>
+          </section>
+          <section class="pr__card">
+            <h3>Ready to share</h3>
+            <div class="pr__row"><span>Browser link</span><em>wanaka.app/g/getaway-drive</em></div>
+            <div class="pr__row"><span>Thumbnail</span><em>1280×720 · exported</em></div>
+            <div class="pr__row"><span>Trailer clip</span><em>12s · queued</em></div>
+            <button class="pr__publish">↗ Publish to Community</button>
+          </section>
+        </div>
+      </div>
+    </div>`;
+}
+
+
 /* ──────────────────────────────────────────────────────────────────
    Boot. Everything below runs last on purpose: the screens above are
    function declarations (hoisted), but their data tables are `const`,
@@ -2011,7 +2112,24 @@ if (QUERY.includes('build')) {
 if (QUERY.includes('studio')) {
   mountStudio();
   const t = (QUERY.match(/tab=(\w+)/) || [])[1];
-  if (t) { mountTasks(); mountPreviewGame(); mountCrewStage(JOBS.map((j) => j.key)); showTab(t); }
+  if (t) {
+    mountTasks(); mountPreviewGame();
+    mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
+    // a snapshot mid-build, so every state is visible at once
+    setMember('developer', 'done', 'Core loop wired');   setProgress('developer', 100);
+    setMember('artist', 'working', 'Neon pass');          setProgress('artist', 72);
+    setMember('audio', 'review', 'needs your call');      setProgress('audio', 55);
+    setMember('tester', 'working', 'Chase balance');      setProgress('tester', 40);
+    setMember('marketing', 'idle', 'waiting');            setProgress('marketing', 0);
+    JOBS.forEach((j) => j.steps.forEach((_, i) => {
+      const st = j.key === 'developer' ? 'done'
+        : (j.key === 'artist' && i < 3) || (j.key === 'audio' && i < 2) || (j.key === 'tester' && i < 1) ? 'done'
+        : (j.key === 'artist' && i === 3) || (j.key === 'tester' && i === 1) ? 'running'
+        : j.key === 'audio' && i === 2 ? 'review' : '';
+      if (st) setTask(j.key, i, st);
+    }));
+    showTab(t);
+  }
 }
 
 // ?pay — jump straight to the pricing modal (review / capture)

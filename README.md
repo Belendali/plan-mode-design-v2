@@ -48,6 +48,21 @@ sign-in card floating over the Studio → straight into the build.
 
 Steps 6–7 are unchanged from v1 on purpose — the entry is what v2 reworks.
 
+## The Studio
+
+Six views behind one tab bar, all real markup — the export-screenshot chrome is gone.
+
+| Tab | What it is |
+|---|---|
+| **Preview** | The generated game, with the title screen and control hints |
+| **Studio** | Scene editor — outliner, transform gizmo, inspector, grid viewport |
+| **PR** | What Marketing shipped: key art, store copy, share links |
+| **Assets** | Everything Artist and Audio made, with build status per item |
+| **Code** | Developer's files, with the pursuit system open |
+| **Crew** | Task list for this build plus every Wana's live state |
+
+`?studio&tab=<key>` opens any of them directly.
+
 ## Structure
 
 `index.html` / `app.css` / `app.js`, no build step. `wireframeSVG()` is the Developer's
