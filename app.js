@@ -93,23 +93,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // ── Shell ─────────────────────────────────────────────────────────
 const stage = document.getElementById('stage');
 stage.innerHTML = `
-  <div class="studio"></div>
-  <div class="chrome"></div>
   <button class="trialflag" id="trial-flag" title="Demo control — flips the free-run state">
     <i></i><span>Free run <b>available</b></span>
   </button>
   <div class="panel">
     <div class="panel__glow"><img src="assets/bg-ellipses.svg" alt=""></div>
 
-    <div class="topbar">
-      <div class="seg">
-        <button class="seg__btn is-active"><img src="assets/build.svg" alt="">Build</button>
-        <button class="seg__btn">${GAME_ICON}Preview</button>
-      </div>
-      <div class="publish"><img src="assets/publish.svg" alt="">publish</div>
-    </div>
-
-    <div class="chatinfo">
+    <div class="chatinfo chatinfo--top">
       <div class="chatinfo__name"><span>Chat name Chat...</span><img src="assets/chevron.svg" alt=""></div>
       <div class="chatinfo__rule"></div>
       <div class="chatinfo__stats">
@@ -681,7 +671,7 @@ function mountBuild() {
       <button class="miniplan__try" id="mini-try">▶&nbsp;&nbsp;Try demo</button>
     </div>
   `;
-  document.getElementById('stage').appendChild(build);
+  (document.querySelector('.view--game') || document.getElementById('stage')).appendChild(build);
   // ?clean — hide the overlaid UI so the viewport can be captured as a plate
   if (QUERY.includes('clean')) build.classList.add('is-clean');
   build.classList.add('is-on');
@@ -1535,6 +1525,7 @@ function screenLogin(ask) {
 
 // The brief arrives with the user; Wanaka walks them round before anyone works.
 function startOnboarding(ask) {
+  mountStudio();
   clearStart();
   log.innerHTML = '';
   perch.style.opacity = '0';
@@ -1594,7 +1585,7 @@ function mountCrewStage(only) {
       <span class="member__bar"><i class="member__fill"></i></span>
       <span class="member__state">waiting</span>
     </figure>`).join('');
-  document.getElementById('stage').appendChild(s);
+  (document.getElementById('crewfloor') || document.getElementById('stage')).appendChild(s);
   return s;
 }
 function setMember(key, state, label) {
@@ -1732,16 +1723,19 @@ async function runJob(job, build) {
   await wait(job.start);
   for (let i = 0; i < n; i++) {
     setMember(job.key, 'working', job.steps[i]);
+    setTask(job.key, i, 'running');
     setProgress(job.key, Math.round((i / n) * 100));
     await wait(job.tick);
     if (job.checkAt === i) {
       setMember(job.key, 'review', 'needs your call');
+      setTask(job.key, i, 'review');
       setProgress(job.key, Math.round(((i + 1) / n) * 100));
       const pick = await askAgent(job);
       if (job.key === 'artist' && /golden/i.test(pick) && build) build.classList.add('is-golden');
       if (job.key === 'developer') job.twist = pick;
       setMember(job.key, 'working', job.steps[i]);
     }
+    setTask(job.key, i, 'done');
   }
   setProgress(job.key, 100);
   setMember(job.key, 'done', job.done);
@@ -1761,8 +1755,12 @@ async function screenBuildParallel() {
   switchEl.classList.add('is-on');
   input.placeholder = 'Click Stop to cancel…';
 
+  mountStudio();
   const build = mountBuild();
   build.classList.add('is-art');
+  showTab('crew');
+  document.querySelector('.tab[data-tab="crew"]').classList.add('has-work');
+  mountTasks();
   // the crew on the floor replaces the little side panel entirely
   const mp = document.getElementById('miniplan');
   if (mp) mp.remove();
@@ -1779,6 +1777,11 @@ async function screenBuildParallel() {
   await Promise.all(JOBS.map((j) => runJob(j, build)));
 
   build.classList.add('is-test');
+  document.querySelector('.tab[data-tab="crew"]').classList.remove('has-work');
+  const sub = document.getElementById('crew-sub');
+  if (sub) sub.textContent = 'All five finished. The build is in Preview.';
+  mountPreviewGame();
+  showTab('preview');
   await wait(400);
   const sum = el('div', 'summary');
   sum.innerHTML = `
@@ -1807,6 +1810,191 @@ async function screenBuildParallel() {
 }
 
 
+
+
+// ── Studio shell ──────────────────────────────────────────────────
+// Five full-height views behind one tab bar. Nothing here is a screenshot.
+const TABS = [
+  { key: 'game',    label: 'Game',    icon: '◍' },
+  { key: 'assets',  label: 'Assets',  icon: '▦' },
+  { key: 'code',    label: 'Code',    icon: '‹›' },
+  { key: 'preview', label: 'Preview', icon: '▷' },
+  { key: 'crew',    label: 'Crew',    icon: '☰' },
+];
+
+const ASSETS_LIB = [
+  { group: '3D Models', by: 'Artist', items: [
+    ['Player car', 'ready'], ['Cop car ×5', 'ready'], ['Block · brownstone', 'ready'],
+    ['Block · storefront', 'ready'], ['Street props', 'building'], ['Coin pickup', 'ready'] ] },
+  { group: 'Materials & Sky', by: 'Artist', items: [
+    ['Wet asphalt', 'ready'], ['Neon signage', 'ready'], ['Night sky preset', 'ready'], ['Rain particles', 'building'] ] },
+  { group: 'Audio', by: 'Audio', items: [
+    ['Engine loop', 'ready'], ['Coin pickup SFX', 'ready'], ['Siren layer', 'ready'], ['Night city bed', 'building'] ] },
+  { group: 'UI', by: 'Artist', items: [
+    ['HUD · speed', 'ready'], ['HUD · timer', 'ready'], ['Results screen', 'queued'] ] },
+];
+
+const CODE_TREE = ['game.config.ts', 'scenes/NightStreets.ts', 'systems/Drive.ts',
+                   'systems/Pursuit.ts', 'systems/Pickups.ts', 'ui/Hud.ts'];
+const CODE_LINES = [
+  ['kw', 'export function'], ['fn', ' createPursuit'], ['pn', '(cops'], ['op', ': '], ['ty', 'Cop[]'], ['pn', ', player'], ['op', ': '], ['ty', 'Car'], ['pn', ') {'],
+];
+
+function mountStudio() {
+  let s = document.getElementById('studio');
+  if (s) return s;
+  s = el('div', 'studio2');
+  s.id = 'studio';
+  s.innerHTML = `
+    <header class="topbar2">
+      <img class="topbar2__logo" src="assets/logo.png" alt="Wanaka">
+      <div class="scenes">
+        <button class="scene is-on">Scene 1</button>
+        <button class="scene scene--add" title="Add a scene">+</button>
+      </div>
+      <span class="topbar2__rule"></span>
+      <nav class="tabs" id="tabs">
+        ${TABS.map((t) => `<button class="tab" data-tab="${t.key}"><i>${t.icon}</i>${t.label}</button>`).join('')}
+      </nav>
+      <div class="topbar2__right">
+        <button class="topbar2__publish">↗ publish</button>
+      </div>
+    </header>
+    <div class="views" id="views">
+      <section class="view view--game" data-view="game"></section>
+      <section class="view view--assets" data-view="assets">${assetsView()}</section>
+      <section class="view view--code" data-view="code">${codeView()}</section>
+      <section class="view view--preview" data-view="preview">${previewView()}</section>
+      <section class="view view--crew" data-view="crew">${crewView()}</section>
+    </div>
+  `;
+  document.getElementById('stage').insertBefore(s, document.querySelector('.panel'));
+  s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
+  // the Game view is the scene itself, so it is never empty
+  const g = s.querySelector('.view--game');
+  if (!document.getElementById('build')) { const bd = mountBuild(); bd.classList.add('is-art'); }
+  else g.appendChild(document.getElementById('build'));
+  showTab('game');
+  return s;
+}
+
+function showTab(key) {
+  const s = document.getElementById('studio');
+  if (!s) return;
+  s.querySelectorAll('.tab').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === key));
+  s.querySelectorAll('.view').forEach((v) => v.classList.toggle('is-on', v.dataset.view === key));
+}
+
+function assetsView() {
+  return `
+    <div class="pane">
+      <div class="pane__head">
+        <h2>Assets</h2>
+        <p>Everything Artist and Audio have made for this build.</p>
+      </div>
+      <div class="lib">
+        ${ASSETS_LIB.map((g) => `
+          <section class="lib__group">
+            <header><h3>${g.group}</h3><span class="lib__by">
+              <img src="assets/crew-${g.by.toLowerCase()}.webp" alt="">${g.by} Wana</span></header>
+            <div class="lib__grid">
+              ${g.items.map(([n, st]) => `
+                <article class="asset is-${st}">
+                  <div class="asset__thumb"></div>
+                  <span class="asset__name">${n}</span>
+                  <span class="asset__state">${st}</span>
+                </article>`).join('')}
+            </div>
+          </section>`).join('')}
+      </div>
+    </div>`;
+}
+
+function codeView() {
+  return `
+    <div class="pane pane--code">
+      <aside class="tree">
+        <h3>Project</h3>
+        ${CODE_TREE.map((f, i) => `<button class="tree__f${i === 3 ? ' is-on' : ''}">${f}</button>`).join('')}
+      </aside>
+      <div class="editor">
+        <header class="editor__tab">systems/Pursuit.ts<span class="editor__by">
+          <img src="assets/crew-developer.webp" alt="">Developer Wana</span></header>
+        <pre class="code"><code><span class="ln"></span><span class="c">// cops learn the route you keep taking</span>
+<span class="ln"></span><span class="kw">export function</span> <span class="fn">createPursuit</span>(cops<span class="op">:</span> <span class="ty">Cop</span>[], player<span class="op">:</span> <span class="ty">Car</span>) {
+<span class="ln"></span>  <span class="kw">const</span> memory <span class="op">=</span> <span class="kw">new</span> <span class="ty">RouteMemory</span>(<span class="nu">12</span>)
+
+<span class="ln"></span>  <span class="kw">return</span> <span class="fn">tick</span>(dt<span class="op">:</span> <span class="ty">number</span>) <span class="op">=&gt;</span> {
+<span class="ln"></span>    memory.<span class="fn">sample</span>(player.position)
+<span class="ln"></span>    <span class="kw">for</span> (<span class="kw">const</span> cop <span class="kw">of</span> cops) {
+<span class="ln"></span>      <span class="kw">const</span> guess <span class="op">=</span> memory.<span class="fn">predict</span>(cop.lookahead)
+<span class="ln"></span>      cop.<span class="fn">steerToward</span>(guess, dt)
+<span class="ln"></span>    }
+<span class="ln"></span>  }
+<span class="ln"></span>}</code></pre>
+      </div>
+    </div>`;
+}
+
+function previewView() {
+  return `
+    <div class="pane pane--preview">
+      <header class="pv__bar">
+        <span class="pv__title">Game preview</span>
+        <span class="pv__tools">
+          <button title="Sound">🔊</button><button title="Screenshot">⛶</button>
+          <button title="Reload">⟳</button><button title="Open">↗</button><button title="Fullscreen">⤢</button>
+        </span>
+      </header>
+      <div class="pv__frame">
+        <div class="pv__game" id="pv-game"></div>
+        <div class="pv__menu">
+          <h1>Getaway Drive</h1>
+          <p>Outrun five cop cars through a neon Manhattan — grab every coin before they box you in.</p>
+          <button class="pv__play">Play</button>
+          <button class="pv__quit">Quit</button>
+        </div>
+        <span class="pv__made">GAME MADE ON <b>WANAKA</b></span>
+      </div>
+      <footer class="pv__keys">
+        <span>WASD / Arrows — Drive</span><span>Shift — Boost</span>
+        <span>Space — Handbrake</span><span>Esc — Pause</span>
+      </footer>
+    </div>`;
+}
+
+function crewView() {
+  return `
+    <div class="pane pane--crew">
+      <div class="pane__head">
+        <h2>Crew</h2>
+        <p id="crew-sub">What everyone is working on right now.</p>
+      </div>
+      <div class="crewwrap">
+        <aside class="tasks" id="tasks"></aside>
+        <div class="crewfloor" id="crewfloor"></div>
+      </div>
+    </div>`;
+}
+
+// The task list mirrors the jobs, so the Crew room answers "what's left?"
+function mountTasks() {
+  const box = document.getElementById('tasks');
+  if (!box) return;
+  box.innerHTML = '<h3>Tasks · version 1.0</h3>' + JOBS.map((j) =>
+    j.steps.map((st, i) => `<div class="task" id="task-${j.key}-${i}">
+        <span class="task__dot"></span><span>${st}</span></div>`).join('')).join('');
+}
+function setTask(key, i, state) {
+  const t = document.getElementById(`task-${key}-${i}`);
+  if (t) t.className = 'task is-' + state;
+}
+function mountPreviewGame() {
+  const g = document.getElementById('pv-game');
+  if (g && !g.innerHTML) g.innerHTML = citySVG();
+}
+
+
 /* ──────────────────────────────────────────────────────────────────
    Boot. Everything below runs last on purpose: the screens above are
    function declarations (hoisted), but their data tables are `const`,
@@ -1819,6 +2007,11 @@ paintTrial();
 if (QUERY.includes('build')) {
   clearStart();
   screenBuildParallel();
+}
+if (QUERY.includes('studio')) {
+  mountStudio();
+  const t = (QUERY.match(/tab=(\w+)/) || [])[1];
+  if (t) { mountTasks(); mountPreviewGame(); mountCrewStage(JOBS.map((j) => j.key)); showTab(t); }
 }
 
 // ?pay — jump straight to the pricing modal (review / capture)
