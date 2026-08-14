@@ -34,7 +34,9 @@ over the game, so the build fills the whole canvas instead of sitting in a box.
 
 ## Flow
 
-`#step1` … `#step7` deep-link into any stage.
+`?site` starts where a new user does — wanaka.app, brief already typed, `Create` →
+sign-in card floating over the Studio → straight into the build.
+`?site&login` jumps to the sign-in card. `#step1` … `#step7` deep-link into any stage.
 
 1. Idea list
 2. Three scoping questions

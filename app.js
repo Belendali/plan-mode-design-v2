@@ -1456,3 +1456,108 @@ function openPaywall(onUpgrade) {
 }
 
 paintTrial();   // `trial` is declared below the init block
+
+// ── The way in: wanaka.app → sign in → Studio ─────────────────────
+const SITE = {
+  nav: ['How it works', 'Templates', 'Community', 'Pricing'],
+  headline: 'Build a playable 3D game with AI.',
+  sub: 'Describe it, build it with AI, then share a browser link — no code required.',
+  placeholder: 'Cozy city builder',
+  seed: 'build a racing game in NYC for me',
+  chips: ['Cozy city builder', 'Multiplayer obstacle course', 'Space survival adventure'],
+};
+
+function screenSite() {
+  const old = document.getElementById('site');
+  if (old) old.remove();
+  const site = el('div', 'site');
+  site.id = 'site';
+  site.innerHTML = `
+    <img class="site__art" src="assets/site-hero.jpg" alt="">
+    <header class="site__header">
+      <img class="site__logo" src="assets/logo.png" alt="Wanaka">
+      <nav class="site__nav">${SITE.nav.map((n) => `<a href="#" onclick="return false">${n}</a>`).join('')}</nav>
+      <span class="site__auth">
+        <a class="site__signin" href="#" onclick="return false">Sign in</a>
+        <button class="site__start">Start free</button>
+      </span>
+    </header>
+    <div class="site__hero">
+      <h1>${SITE.headline}</h1>
+      <p>${SITE.sub}</p>
+      <div class="siteinput">
+        <textarea id="site-input" placeholder="${SITE.placeholder}">${SITE.seed}</textarea>
+        <div class="siteinput__row">
+          <button class="siteinput__plus" aria-label="Attach">+</button>
+          <button class="siteinput__go" id="site-create">↑&nbsp; Create</button>
+        </div>
+      </div>
+      <div class="sitechips">${SITE.chips.map((c) => `<button class="sitechip">${c}</button>`).join('')}</div>
+    </div>
+  `;
+  document.getElementById('stage').appendChild(site);
+  site.querySelectorAll('.sitechip').forEach((b) => {
+    b.onclick = () => { document.getElementById('site-input').value = b.textContent; };
+  });
+  const go = () => {
+    const ask = document.getElementById('site-input').value.trim() || SITE.seed;
+    site.classList.add('is-leaving');
+    setTimeout(() => site.remove(), 420);
+    screenLogin(ask);
+  };
+  site.querySelector('#site-create').onclick = go;
+  site.querySelector('.site__start').onclick = go;
+  return site;
+}
+
+// The sign-in card floats over the Studio, so you can already see where you landed.
+function screenLogin(ask) {
+  const old = document.getElementById('login');
+  if (old) old.remove();
+  const w = el('div', 'login');
+  w.id = 'login';
+  w.innerHTML = `
+    <div class="login__veil"></div>
+    <div class="login__card">
+      <img class="login__logo" src="assets/logo.png" alt="Wanaka">
+      <h2>Welcome to Wanaka studio</h2>
+      <p class="login__sub">Log in or sign up to continue</p>
+      <button class="login__google">
+        <span class="login__g">G</span> Continue with Google
+      </button>
+      <div class="login__or"><span>OR</span></div>
+      <label class="login__label">Email</label>
+      <input class="login__field" type="email" value="bella@wanaka.app" readonly>
+      <label class="login__label">Password</label>
+      <input class="login__field" type="password" value="••••••••••" readonly>
+      <a class="login__forgot" href="#" onclick="return false">Forgot password?</a>
+      <button class="login__submit" id="login-go">Log in</button>
+      <p class="login__signup">Don’t have an account? <a href="#" onclick="return false">Sign up Now</a></p>
+    </div>
+  `;
+  document.getElementById('stage').appendChild(w);
+  const enter = () => {
+    w.classList.add('is-leaving');
+    setTimeout(() => w.remove(), 320);
+    startOnboarding(ask);
+  };
+  w.querySelector('#login-go').onclick = enter;
+  w.querySelector('.login__google').onclick = enter;
+  return w;
+}
+
+// placeholder until the tour lands — drops the brief straight into chat
+function startOnboarding(ask) {
+  clearStart();
+  log.innerHTML = '';
+  push(el('div', 'msg msg--user', ask));
+  setSend('disabled');
+}
+
+// ?site / #site — start from wanaka.app, the way a new user arrives
+// ?login jumps straight to the sign-in card over the Studio
+if (QUERY.includes('site') || location.hash === '#site') {
+  clearStart();
+  if (QUERY.includes('login')) screenLogin(SITE.seed);
+  else screenSite();
+}

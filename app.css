@@ -872,3 +872,131 @@ body{
 .subtask.is-done{opacity:.85;color:var(--text-dim)}
 .subtask.is-done .subtask__dot{background:var(--lime);border-color:var(--lime);animation:none}
 .subtask.is-done .subtask__dot::after{content:'✓'}
+
+/* ── wanaka.app — the way in ──────────────────────────────────────── */
+.site{
+  position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:20;
+  background:#0A0714;overflow:hidden;
+  transition:opacity .42s ease,transform .42s ease;
+}
+.site.is-leaving{opacity:0;transform:scale(1.02)}
+.site__art{
+  position:absolute;left:0;top:0;width:100%;height:800px;object-fit:cover;display:block;
+}
+.site::after{
+  content:'';position:absolute;left:0;top:0;right:0;height:800px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,7,20,.35) 0%,rgba(10,7,20,0) 30%,rgba(10,7,20,.75) 72%,#0A0714 100%);
+}
+.site__header{
+  position:absolute;left:50%;transform:translateX(-50%);top:26px;z-index:3;
+  width:1144px;height:62px;display:flex;align-items:center;gap:34px;
+}
+.site__logo{height:26px;width:auto;display:block}
+.site__nav{display:flex;gap:28px;margin-left:14px}
+.site__nav a{font-size:14px;color:rgba(255,255,255,.82);text-decoration:none}
+.site__nav a:hover{color:#fff}
+.site__auth{margin-left:auto;display:flex;align-items:center;gap:18px}
+.site__signin{font-size:14px;color:rgba(255,255,255,.85);text-decoration:none}
+.site__start{
+  height:40px;padding:0 20px;border:0;border-radius:20px;cursor:pointer;
+  background:#fff;color:#191919;font-family:var(--font);font-size:14px;font-weight:600;
+}
+.site__start:hover{filter:brightness(.95)}
+
+.site__hero{
+  position:absolute;left:50%;transform:translateX(-50%);top:560px;z-index:3;
+  width:820px;text-align:center;
+}
+.site__hero h1{
+  margin:0 0 14px;font-size:56px;line-height:1.1;font-weight:600;letter-spacing:-.02em;color:#fff;
+  text-shadow:0 4px 30px rgba(0,0,0,.6);
+}
+.site__hero > p{margin:0 0 30px;font-size:15.8px;color:rgba(255,255,255,.72)}
+
+.siteinput{
+  background:rgba(30,26,34,.86);border:1px solid rgba(255,255,255,.12);border-radius:18px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:16px 16px 12px;text-align:left;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+.siteinput textarea{
+  width:100%;height:58px;border:0;background:transparent;resize:none;outline:none;
+  font-family:var(--font);font-size:15px;line-height:1.5;color:#fff;
+}
+.siteinput textarea::placeholder{color:rgba(255,255,255,.38)}
+.siteinput__row{display:flex;align-items:center;justify-content:space-between}
+.siteinput__plus{
+  width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:18px;line-height:1;
+}
+.siteinput__go{
+  height:38px;padding:0 20px;border:0;border-radius:19px;cursor:pointer;
+  background:#fff;color:#191919;font-family:var(--font);font-size:14px;font-weight:600;
+}
+.siteinput__go:hover{filter:brightness(.94)}
+.sitechips{display:flex;justify-content:center;gap:14px;margin-top:22px}
+.sitechip{
+  padding:9px 18px;border-radius:12px;cursor:pointer;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  font-family:var(--font);font-size:12.5px;color:rgba(255,255,255,.8);
+}
+.sitechip:hover{background:rgba(255,255,255,.13);color:#fff}
+
+/* ── Sign in, floating over the Studio ────────────────────────────── */
+/* visible by default and animated in, so a throttled tab can never leave it blank */
+.login{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:21;
+  animation:loginIn .38s ease}
+@keyframes loginIn{from{opacity:0}to{opacity:1}}
+.login.is-leaving{opacity:0;transition:opacity .3s ease}
+.login__veil{
+  position:absolute;inset:0;background:rgba(6,4,8,.62);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+.login__card{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  animation:loginCard .42s cubic-bezier(.2,.85,.3,1);
+  width:432px;padding:30px 34px 26px;border-radius:16px;
+  background:#1B1B1B;border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 40px 110px rgba(0,0,0,.6);
+  text-align:center;
+}
+@keyframes loginCard{from{transform:translate(-50%,-52%) scale(.97);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+.login__logo{height:26px;width:auto;display:block;margin:0 auto 14px}
+.login__card h2{
+  margin:0 0 6px;font-family:var(--font-pixel);font-weight:400;font-size:19px;color:#fff;
+  font-variation-settings:'CRSV' 0,'ELSH' 0,'ELXP' 0;
+}
+.login__sub{margin:0 0 20px;font-size:13px;color:rgba(255,255,255,.55)}
+.login__google{
+  width:100%;height:44px;border-radius:9px;cursor:pointer;
+  background:#242424;border:1px solid rgba(255,255,255,.14);color:#fff;
+  font-family:var(--font);font-size:14px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.login__google:hover{background:#2E2E2E}
+.login__g{
+  width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+  background:#fff;color:#4285F4;font-weight:700;font-size:12px;font-family:var(--font);
+}
+.login__or{position:relative;margin:18px 0;height:1px;background:rgba(255,255,255,.12)}
+.login__or span{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  padding:0 12px;background:#1B1B1B;font-size:11px;color:rgba(255,255,255,.45);
+}
+.login__label{display:block;text-align:left;margin:0 0 6px;font-size:12.5px;font-weight:500;color:rgba(255,255,255,.85)}
+.login__field{
+  width:100%;height:44px;margin:0 0 14px;padding:0 14px;border-radius:9px;
+  background:#151515;border:1px solid rgba(255,255,255,.12);color:#fff;
+  font-family:var(--font);font-size:14px;outline:none;
+}
+.login__forgot{display:block;text-align:right;margin:-6px 0 16px;font-size:12px;
+  color:rgba(255,255,255,.55);text-decoration:none}
+.login__submit{
+  width:100%;height:46px;border-radius:9px;border:0;cursor:pointer;
+  background:#2E2E2E;color:rgba(255,255,255,.9);
+  font-family:var(--font);font-size:15px;font-weight:600;
+  transition:background .18s,color .18s;
+}
+.login__submit:hover{background:var(--lime);color:#141414}
+.login__signup{margin:14px 0 0;font-size:12.5px;color:rgba(255,255,255,.55)}
+.login__signup a{color:var(--lime);text-decoration:underline}
