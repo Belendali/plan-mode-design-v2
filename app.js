@@ -740,6 +740,25 @@ function agentSay(c, msg) {
      <span><strong>${c.name}</strong>${msg}</span>`));
 }
 
+// Planner takes the floor while everyone else stands by.
+async function screenPlanningStage() {
+  const st = el('div', 'planning');
+  st.id = 'planning';
+  st.innerHTML = `
+    <img class="planning__cat" src="assets/wana-thinking.webp" alt="">
+    <p class="planning__what">Planner Wana is writing your plan</p>
+    <div class="planning__bar"><i></i></div>`;
+  document.getElementById('stage').appendChild(st);
+  setMember('planner', 'working', 'planning');
+  const think = push(el('div', 'thinking',
+    '<p>Give me a moment — I\'m laying out the whole build.</p><span class="spinner"></span>'));
+  await wait(3200);
+  think.remove();
+  st.remove();
+  setMember('planner', 'done', 'plan ready');
+  screenPlan();
+}
+
 async function screenBuild() {
   busy = true;
   setSend('busy');
@@ -1546,12 +1565,43 @@ function screenLogin(ask) {
   return w;
 }
 
-// placeholder until the tour lands — drops the brief straight into chat
+// The brief arrives with the user; Wanaka walks them round before anyone works.
 function startOnboarding(ask) {
   clearStart();
   log.innerHTML = '';
+  perch.style.opacity = '0';
   push(el('div', 'msg msg--user', ask));
   setSend('disabled');
+  input.placeholder = 'Ask, plan, build anything...';
+  startTour(ask, () => afterTour(ask));
+}
+
+// Tour over: the crew is on the floor, Crew mode is on, Planner takes the brief.
+async function afterTour(ask) {
+  switchEl.classList.add('is-on');
+  const btn = document.getElementById('plannerbtn');
+  btn.classList.add('is-flash');
+  setTimeout(() => btn.classList.remove('is-flash'), 1400);
+  const chip = document.querySelector('.composer-head span');
+  if (chip) chip.textContent = 'Wanaka 1.0 · Crew';
+  CREW6.forEach((c) => setMember(c.key, c.key === 'planner' ? 'lead' : 'standby',
+                                 c.key === 'planner' ? 'reading' : 'standby'));
+
+  push(el('div', 'joined', 'Crew assembled'));
+  await wait(600);
+  agentSay({ name: 'Planner Wana', gif: 'assets/crew-planner.webp' },
+    "Right — a racing game in New York. That's enough for me to work with. Two quick things and I'll write the plan.");
+  await wait(500);
+  const q = { ask: 'Racing against rivals, or the clock?', options: ['Against rivals', 'Time trial, just me'] };
+  push(el('div', 'msg msg--agent', q.ask));
+  const pick = await askOptions(q.options);
+  push(el('div', 'msg msg--user', pick));
+  await wait(500);
+  push(el('div', 'msg msg--agent', 'Night or day in the city?'));
+  const when = await askOptions(['Night — neon and rain', 'Golden hour']);
+  push(el('div', 'msg msg--user', when));
+  await wait(600);
+  screenPlanningStage();
 }
 
 // ?site / #site — start from wanaka.app, the way a new user arrives
@@ -1560,4 +1610,107 @@ if (QUERY.includes('site') || location.hash === '#site') {
   clearStart();
   if (QUERY.includes('login')) screenLogin(SITE.seed);
   else screenSite();
+}
+
+// ── The crew on stage ─────────────────────────────────────────────
+const CREW6 = [
+  { key: 'planner',   name: 'Planner',   role: 'Plans the build' },
+  { key: 'developer', name: 'Developer', role: 'Logic & code' },
+  { key: 'artist',    name: 'Artist',    role: 'Look & feel' },
+  { key: 'audio',     name: 'Audio',     role: 'Music & SFX' },
+  { key: 'tester',    name: 'Tester',    role: 'Playtest' },
+  { key: 'marketing', name: 'Marketing', role: 'Launch & reach' },
+];
+
+function mountCrewStage() {
+  let s = document.getElementById('crewstage');
+  if (s) return s;
+  s = el('div', 'crewstage');
+  s.id = 'crewstage';
+  s.innerHTML = CREW6.map((c) => `
+    <figure class="member" id="mem-${c.key}">
+      <img src="assets/crew-${c.key}.webp" alt="">
+      <figcaption><b>${c.name}</b><em>${c.role}</em></figcaption>
+      <span class="member__state">waiting</span>
+    </figure>`).join('');
+  document.getElementById('stage').appendChild(s);
+  return s;
+}
+function setMember(key, state, label) {
+  const m = document.getElementById('mem-' + key);
+  if (!m) return;
+  m.className = 'member is-' + state;
+  const s = m.querySelector('.member__state');
+  if (s) s.textContent = label || state;
+}
+function unmountCrewStage() {
+  const s = document.getElementById('crewstage');
+  if (s) s.remove();
+}
+
+// ── Wanaka's tour ─────────────────────────────────────────────────
+const TOUR = [
+  { cat: 'hello', focus: null, at: 'centre',
+    copy: "Hi Bella — welcome to Wanaka Game Studio. Ready to bring that idea in and finally be the one who makes the game? Let me show you around first." },
+  { cat: 'idle', focus: 'chat', at: 'left',
+    copy: "Tell me what you want right here. I've got a whole crew of cat engineers to plan it out and walk you from nothing to something you can play." },
+  { cat: 'idle', focus: 'edit', at: 'right',
+    copy: "And this side is yours. Move things, swap models, light the scene — this is a real studio, so you can always take the wheel yourself." },
+  { cat: 'idle', focus: null, at: 'aside', crew: true,
+    copy: "Now come meet my crew. Every one of them is a specialist, and they'll be with you the whole way." },
+];
+const FOCUS_RECT = {
+  chat: [1401, 8, 513, 1064],
+  edit: [8, 8, 1379, 1064],
+};
+
+function startTour(ask, done) {
+  const t = el('div', 'tour');
+  t.id = 'tour';
+  t.innerHTML = `
+    <div class="tour__hole" id="tour-hole"></div>
+    <img class="tour__wana" id="tour-wana" src="assets/wana-hello.webp" alt="">
+    <div class="tour__bubble" id="tour-bubble">
+      <p id="tour-copy"></p>
+      <div class="tour__foot">
+        <span class="tour__dots" id="tour-dots"></span>
+        <button class="tour__next" id="tour-next">Next</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('stage').appendChild(t);
+
+  const hole = t.querySelector('#tour-hole');
+  const wana = t.querySelector('#tour-wana');
+  const copy = t.querySelector('#tour-copy');
+  const dots = t.querySelector('#tour-dots');
+  const next = t.querySelector('#tour-next');
+  let i = 0;
+
+  const paint = () => {
+    const s = TOUR[i];
+    copy.textContent = s.copy;
+    wana.src = 'assets/wana-' + s.cat + '.webp';
+    t.className = 'tour is-' + s.at + (s.focus ? ' has-focus' : '');
+    if (s.focus) {
+      const [x, y, w, h] = FOCUS_RECT[s.focus];
+      hole.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`;
+    } else {
+      hole.style.cssText = '';          // let the collapsed default take over again
+    }
+    if (s.crew) {
+      mountCrewStage().classList.add('is-lit');   // the crew has to be visible to be met
+      t.classList.add('is-meet');
+    }
+    dots.innerHTML = TOUR.map((_, k) => `<i class="${k === i ? 'is-on' : ''}"></i>`).join('');
+    next.textContent = i === TOUR.length - 1 ? "Let's go" : 'Next';
+  };
+  next.onclick = () => {
+    if (i < TOUR.length - 1) { i++; paint(); return; }
+    t.classList.add('is-leaving');
+    setTimeout(() => t.remove(), 420);
+    done && done();
+  };
+  paint();
+  return t;
 }
