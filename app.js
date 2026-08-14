@@ -1552,8 +1552,7 @@ async function afterTour(ask) {
   setTimeout(() => btn.classList.remove('is-flash'), 1400);
   const chip = document.querySelector('.composer-head span');
   if (chip) chip.textContent = 'Wanaka 1.0 · Crew';
-  CREW6.forEach((c) => setMember(c.key, c.key === 'planner' ? 'lead' : 'standby',
-                                 c.key === 'planner' ? 'reading' : 'standby'));
+  unmountCrewStage();          // they showed their faces; now the stage clears
 
   push(el('div', 'joined', 'Crew assembled'));
   await wait(600);
@@ -1582,12 +1581,13 @@ const CREW6 = [
   { key: 'marketing', name: 'Marketing', role: 'Launch & reach' },
 ];
 
-function mountCrewStage() {
-  let s = document.getElementById('crewstage');
-  if (s) return s;
-  s = el('div', 'crewstage');
+function mountCrewStage(only) {
+  const existing = document.getElementById('crewstage');
+  if (existing) existing.remove();
+  const list = only ? CREW6.filter((c) => only.includes(c.key)) : CREW6;
+  const s = el('div', 'crewstage');
   s.id = 'crewstage';
-  s.innerHTML = CREW6.map((c) => `
+  s.innerHTML = list.map((c) => `
     <figure class="member" id="mem-${c.key}">
       <img src="assets/crew-${c.key}.webp" alt="">
       <figcaption><b>${c.name}</b><em>${c.role}</em></figcaption>
@@ -1768,10 +1768,8 @@ async function screenBuildParallel() {
   if (mp) mp.remove();
   const bs = document.getElementById('build-status');
   if (bs) bs.remove();
-  const stage = mountCrewStage();
+  const stage = mountCrewStage(JOBS.map((j) => j.key));
   stage.classList.add('is-lit', 'is-working');
-  setMember('planner', 'lead', 'running the build');
-  setProgress('planner', 100);
 
   push(el('div', 'msg msg--user', BUILD_PROMPT));
   await wait(500);
