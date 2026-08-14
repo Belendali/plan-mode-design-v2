@@ -1040,16 +1040,22 @@ function planDoc() {
     <button class="doc__close" id="doc-close" aria-label="Close">✕</button>
     <div class="doc__scroll">
       <header class="doc__hero">
-        <div class="compare">
-          <figure class="compare__half">
+        <figure class="keyart">
+          <img src="assets/game-cover.jpg" alt="">
+          <figcaption>
+            <span class="keyart__tag">Where it can get to</span>
+            Keep building and this is the game at the end of the road.
+          </figcaption>
+        </figure>
+        <div class="firstcut">
+          <figure class="firstcut__shot">
             <img src="assets/card-a.jpg" alt="">
-            <figcaption>Version 1.0 — what this plan builds</figcaption>
           </figure>
-          <figure class="compare__half">
-            <img src="assets/card-b.jpg" alt="">
-            <figcaption>Final version — where it can get to, with more passes</figcaption>
-          </figure>
-          <span class="compare__seam"></span>
+          <div class="firstcut__copy">
+            <span class="firstcut__tag">Version 1.0 · what this plan builds</span>
+            <p>Ten minutes gets you a playable first cut — the loop works, the streets
+               drive, the coins count. Everything after that is polish passes.</p>
+          </div>
         </div>
         <div class="doc__title">
           <h1>${d.title}<span class="doc__ver">${d.version}</span></h1>
