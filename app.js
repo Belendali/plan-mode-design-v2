@@ -2032,13 +2032,12 @@ function crewDeck() {
     <div class="deck__win"><div class="deck__track" id="deck-track">
       ${JOBS.map((j) => `
         <article class="card" id="mini-${j.key}">
-          <header class="card__top">
-            <span class="card__stage">${(STAGES.find((st) => st.crew.includes(j.key)) || {}).name || 'Build'}</span>
-            <span class="card__ticks">${j.steps.map((t, k) =>
-              `<i id="tick-${j.key}-${k}" title="${t}"></i>`).join('')}</span>
-          </header>
           <span class="card__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
           <b>${j.name}</b>
+          <span class="card__stage">${(STAGES.find((st) => st.crew.includes(j.key)) || {}).name || 'Build'}</span>
+          <ol class="card__steps">
+            ${j.steps.map((t, k) => `<li id="tick-${j.key}-${k}"><i></i>${t}</li>`).join('')}
+          </ol>
           <em id="mini-${j.key}-doing">waiting</em>
           <span class="card__bar"><i id="deckfill-${j.key}"></i></span>
           <button class="card__cta">Confirm the next step →</button>
@@ -2290,6 +2289,7 @@ function setTask(key, i, state) {
   if (t) t.className = 'task is-' + state;
   const tick = document.getElementById(`tick-${key}-${i}`);
   if (tick) tick.className = 'is-' + state;
+  if (tick && state === 'running') tick.scrollIntoView({ block: 'nearest' });
   if (state === 'done') studioSpawn(key, i);
   const c = document.getElementById('ed-gen-count');
   paintOverall();
