@@ -1522,40 +1522,65 @@ body{
 .tab--new{animation:tabPop .6s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes tabPop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
 
-/* ── Tasks — one column per Wana ─────────────────────────────────── */
-.pane--tasks{display:flex;flex-direction:column;overflow:hidden}
-.kanban{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-.col{
-  display:flex;flex-direction:column;padding:14px;border-radius:14px;min-height:0;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
-  transition:border-color .3s,background .3s,opacity .3s;
+/* ── Tasks — the plan's stages, and who is executing each ────────── */
+.pane--tasks{display:flex;flex-direction:column;overflow-y:auto}
+.stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stage-chip{
+  position:relative;padding:13px 14px 16px;border-radius:13px;overflow:hidden;
+  display:flex;align-items:flex-start;gap:11px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);transition:all .35s;
 }
-.col.is-idle{opacity:.6}
-.col.is-working{background:rgba(255,138,61,.07);border-color:rgba(255,138,61,.35)}
-.col.is-review{background:rgba(255,214,102,.09);border-color:rgba(255,214,102,.5)}
-.col.is-done{border-color:rgba(192,240,0,.35)}
-.col__head{display:flex;align-items:center;gap:10px;margin-bottom:11px}
-.col__face{width:52px;height:52px;border-radius:50%;flex:none;overflow:hidden;background:#3a3536;
+.stage-chip__n{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.35);padding-top:2px}
+.stage-chip__t{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.stage-chip__t b{font-size:14px;font-weight:600;color:rgba(255,255,255,.85)}
+.stage-chip__t em{font-style:normal;font-size:11.5px;color:rgba(255,255,255,.42)}
+.stage-chip__pct{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.4)}
+.stage-chip__bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.08)}
+.stage-chip__bar i{display:block;height:100%;width:0;background:var(--lime);transition:width .6s cubic-bezier(.2,.8,.3,1)}
+.stage-chip.is-active{background:rgba(255,138,61,.09);border-color:rgba(255,138,61,.4)}
+.stage-chip.is-active .stage-chip__t b,.stage-chip.is-active .stage-chip__pct{color:#FF8A3D}
+.stage-chip.is-active .stage-chip__bar i{background:#FF8A3D}
+.stage-chip.is-done{border-color:rgba(192,240,0,.32)}
+.stage-chip.is-done .stage-chip__pct{color:var(--lime)}
+.stage-chip.is-queued{opacity:.55}
+
+.stages{display:flex;flex-direction:column;gap:16px}
+.grp{padding:14px;border-radius:14px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.07);transition:all .35s}
+.grp.is-queued{opacity:.5}
+.grp.is-active{border-color:rgba(255,138,61,.3);background:rgba(255,138,61,.04)}
+.grp.is-done{border-color:rgba(192,240,0,.22)}
+.grp__head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.grp__n{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.3)}
+.grp__head h3{margin:0;font-size:14px;font-weight:600;color:rgba(255,255,255,.85)}
+.grp__cols{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.grp:first-child .grp__cols,.grp:nth-child(3) .grp__cols,.grp:nth-child(4) .grp__cols{grid-template-columns:1fr}
+
+.col{display:flex;flex-direction:column;padding:13px;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);transition:all .3s}
+.col.is-idle{opacity:.65}
+.col.is-working{background:rgba(255,138,61,.08);border-color:rgba(255,138,61,.32)}
+.col.is-review{background:rgba(255,214,102,.1);border-color:rgba(255,214,102,.45)}
+.col.is-done{border-color:rgba(192,240,0,.3)}
+.col__head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.col__face{width:46px;height:46px;border-radius:50%;flex:none;overflow:hidden;background:#3a3536;
   display:grid;place-items:center}
 .col__face img{width:132%;height:132%;object-fit:contain;transform:translateY(4%)}
 .col.is-working .col__face img{animation:memberBob 2.4s ease-in-out infinite}
 .col__who{display:flex;flex-direction:column;gap:2px;min-width:0}
-.col__who b{font-size:14px;font-weight:600;color:#fff}
-.col__who em{font-style:normal;font-size:11px;color:rgba(255,255,255,.5);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+.col__who b{font-size:13.5px;font-weight:600;color:#fff}
+.col__who em{font-style:normal;font-size:11px;color:rgba(255,255,255,.5)}
 .col.is-working .col__who em{color:#FF8A3D}
 .col.is-review .col__who em{color:#FFD666}
-.col__bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:12px}
+.col.is-done .col__who em{color:var(--lime)}
+.col__bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:10px}
 .col__fill{display:block;height:100%;width:0;border-radius:2px;background:var(--lime);
   transition:width .6s cubic-bezier(.2,.8,.3,1)}
 .col.is-working .col__fill{background:#FF8A3D}
 .col.is-review .col__fill{background:#FFD666}
-.col__tasks{display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:none}
-.col__tasks::-webkit-scrollbar{display:none}
-.tab.is-live::after{
-  content:'';width:6px;height:6px;border-radius:50%;background:#FF8A3D;
-  animation:pulse 1.2s ease-in-out infinite;
-}
+.col__tasks{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 12px}
+.tab.is-live::after{content:'';width:6px;height:6px;border-radius:50%;background:#FF8A3D;
+  animation:pulse 1.2s ease-in-out infinite}
 
 /* ── Studio while the crew works: read-only, still watchable ─────── */
 .ed.is-locked .ed__tools button,.ed.is-locked .node{opacity:.4;pointer-events:none}
@@ -1601,3 +1626,57 @@ body{
 /* the Studio drops its empty state the moment work starts */
 .studio2.is-generating .view--studio .empty{display:none}
 .studio2.is-generating .view--studio .built{opacity:1;pointer-events:auto}
+
+/* ── Planner writing the plan ─────────────────────────────────────── */
+.planning{background:rgba(8,6,11,.55);backdrop-filter:blur(10px)}
+.planning__card{
+  position:relative;display:flex;align-items:center;gap:26px;padding:30px 36px 30px 30px;
+  border-radius:22px;background:rgba(26,20,28,.94);border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 32px 90px rgba(0,0,0,.6);pointer-events:none;
+}
+.planning__halo{
+  position:absolute;left:96px;top:50%;transform:translate(-50%,-50%);
+  width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(192,240,0,.22),rgba(192,240,0,0) 68%);
+  animation:haloBreathe 2.6s ease-in-out infinite;
+}
+@keyframes haloBreathe{0%,100%{transform:translate(-50%,-50%) scale(.9);opacity:.55}
+  50%{transform:translate(-50%,-50%) scale(1.08);opacity:1}}
+.planning__cat{position:relative;width:180px;height:180px;object-fit:contain;flex:none;
+  filter:drop-shadow(0 16px 34px rgba(0,0,0,.55))}
+.planning__body{position:relative;width:330px}
+.planning__who{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--lime)}
+.planning__what{margin:0 0 16px;display:flex;align-items:center;gap:8px;
+  font-family:var(--font-pixel);font-size:18px;letter-spacing:.6px;color:#fff}
+.planning__what b{font-weight:400;color:var(--lime)}
+.dots{display:inline-flex;gap:4px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.7);display:block;
+  animation:dotBlink 1.2s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.18s}.dots i:nth-child(3){animation-delay:.36s}
+@keyframes dotBlink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.planning__lines{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px}
+.planning__lines li{
+  position:relative;padding-left:20px;font-size:12.5px;color:rgba(255,255,255,.45);
+  opacity:0;transform:translateY(5px);transition:all .4s;
+}
+.planning__lines li::before{content:'';position:absolute;left:0;top:6px;width:8px;height:8px;
+  border-radius:50%;border:1.5px solid rgba(255,255,255,.25)}
+.planning__lines li.is-in{opacity:1;transform:none;color:rgba(255,255,255,.8)}
+.planning__lines li.is-in::before{background:var(--lime);border-color:var(--lime)}
+.planning__bar{width:100%}
+
+/* ── Studio: spawn glow while the crew works ─────────────────────── */
+.ed__spawned .ed__box{animation:spawnGlow 1.1s ease-out both}
+@keyframes spawnGlow{
+  0%{opacity:0;filter:drop-shadow(0 0 22px rgba(192,240,0,.95))}
+  40%{opacity:1;filter:drop-shadow(0 0 16px rgba(192,240,0,.7))}
+  100%{opacity:1;filter:drop-shadow(0 0 0 rgba(192,240,0,0))}
+}
+.ed.is-locked .ed__vp::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:radial-gradient(120% 70% at 50% 62%,rgba(255,138,61,.10),rgba(255,138,61,0) 62%);
+  animation:vpBreathe 2.8s ease-in-out infinite;
+}
+@keyframes vpBreathe{0%,100%{opacity:.5}50%{opacity:1}}
+.ed.is-locked .ed__grid{animation:scanShift 6s ease-in-out infinite}
+@keyframes scanShift{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}

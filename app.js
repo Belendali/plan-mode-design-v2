@@ -735,9 +735,23 @@ async function screenPlanningStage() {
   const st = el('div', 'planning');
   st.id = 'planning';
   st.innerHTML = `
-    <img class="planning__cat" src="assets/wana-thinking.webp" alt="">
-    <p class="planning__what">Planner Wana is writing your plan</p>
-    <div class="planning__bar"><i></i></div>`;
+    <div class="planning__card">
+      <span class="planning__halo"></span>
+      <img class="planning__cat" src="assets/crew-planner.webp" alt="">
+      <div class="planning__body">
+        <p class="planning__who">Planner Wana</p>
+        <p class="planning__what">Writing Game Plan <b>1.0</b><span class="dots"><i></i><i></i><i></i></span></p>
+        <ul class="planning__lines">
+          <li>Core loop · drive, outrun, collect</li>
+          <li>Scene · one night-time block grid</li>
+          <li>Art direction · three palettes</li>
+          <li>Dev stages · code, art, playtest, launch</li>
+        </ul>
+        <div class="planning__bar"><i></i></div>
+      </div>
+    </div>`;
+  setTimeout(() => st.querySelectorAll('.planning__lines li').forEach((li, i) =>
+    setTimeout(() => li.classList.add('is-in'), 320 + i * 520)), 0);
   document.getElementById('stage').appendChild(st);
   setMember('planner', 'working', 'planning');
   const think = push(el('div', 'thinking',
@@ -1889,7 +1903,38 @@ function markBuilt() {
   showTab('preview');
 }
 
-// One board, five columns — each Wana owns its own list.
+// The plan has stages; each stage shows the Wanas executing it.
+const STAGES = [
+  { key: 'code',    n: '01', name: 'Code',     note: 'Make it playable',      crew: ['developer'] },
+  { key: 'art',     name: 'Art & Sound', n: '02', note: 'Make it look and sound like something', crew: ['artist', 'audio'] },
+  { key: 'test',    n: '03', name: 'Playtest', note: 'Make sure it is fun',   crew: ['tester'] },
+  { key: 'launch',  n: '04', name: 'Launch',   note: 'Make it shareable',     crew: ['marketing'] },
+];
+function stageState(st) {
+  const tasks = st.crew.flatMap((k) => {
+    const j = JOBS.find((x) => x.key === k);
+    return j ? j.steps.map((_, i) => document.getElementById(`task-${k}-${i}`)) : [];
+  }).filter(Boolean);
+  if (!tasks.length) return ['queued', 0];
+  const done = tasks.filter((t) => t.classList.contains('is-done')).length;
+  const live = tasks.some((t) => t.classList.contains('is-running') || t.classList.contains('is-review'));
+  const pct = Math.round((done / tasks.length) * 100);
+  return [done === tasks.length ? 'done' : (live || done ? 'active' : 'queued'), pct];
+}
+function paintStages() {
+  STAGES.forEach((st) => {
+    const [state, pct] = stageState(st);
+    const chip = document.getElementById('stg-' + st.key);
+    if (chip) chip.className = 'stage-chip is-' + state;
+    const grp = document.getElementById('grp-' + st.key);
+    if (grp) grp.className = 'grp is-' + state;
+    const f = document.getElementById('stgfill-' + st.key);
+    if (f) f.style.width = pct + '%';
+    const p = document.getElementById('stgpct-' + st.key);
+    if (p) p.textContent = pct + '%';
+  });
+}
+
 function tasksView() {
   return `
     <div class="pane pane--tasks">
@@ -1903,21 +1948,36 @@ function tasksView() {
           <span class="overall__txt" id="overall-txt">0 of 18 done</span>
         </div>
       </div>
-      <div class="kanban">
-        ${JOBS.map((j) => `
-          <section class="col is-idle" id="col-${j.key}">
-            <header class="col__head">
-              <span class="col__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
-              <span class="col__who">
-                <b>${j.name.replace(' Wana', '')}</b>
-                <em id="doing-${j.key}">waiting</em>
-              </span>
-            </header>
-            <div class="col__bar"><i class="col__fill" id="fill-${j.key}"></i></div>
-            <div class="col__tasks">
-              ${j.steps.map((st, i) => `
-                <div class="task" id="task-${j.key}-${i}">
-                  <span class="task__dot"></span><span>${st}</span></div>`).join('')}
+      <div class="stepper">
+        ${STAGES.map((st) => `
+          <div class="stage-chip is-queued" id="stg-${st.key}">
+            <span class="stage-chip__n">${st.n}</span>
+            <span class="stage-chip__t"><b>${st.name}</b><em>${st.note}</em></span>
+            <span class="stage-chip__pct" id="stgpct-${st.key}">0%</span>
+            <span class="stage-chip__bar"><i id="stgfill-${st.key}"></i></span>
+          </div>`).join('')}
+      </div>
+      <div class="stages">
+        ${STAGES.map((st) => `
+          <section class="grp is-queued" id="grp-${st.key}">
+            <header class="grp__head"><span class="grp__n">${st.n}</span><h3>${st.name}</h3></header>
+            <div class="grp__cols">
+              ${st.crew.map((k) => {
+                const j = JOBS.find((x) => x.key === k);
+                return `
+                <div class="col is-idle" id="col-${k}">
+                  <header class="col__head">
+                    <span class="col__face"><img src="assets/crew-${k}.webp" alt=""></span>
+                    <span class="col__who"><b>${j.name.replace(' Wana', '')}</b>
+                      <em id="doing-${k}">waiting</em></span>
+                  </header>
+                  <div class="col__bar"><i class="col__fill" id="fill-${k}"></i></div>
+                  <div class="col__tasks">
+                    ${j.steps.map((t, i) => `
+                      <div class="task" id="task-${k}-${i}">
+                        <span class="task__dot"></span><span>${t}</span></div>`).join('')}
+                  </div>
+                </div>`; }).join('')}
             </div>
           </section>`).join('')}
       </div>
@@ -2147,6 +2207,7 @@ function setTask(key, i, state) {
   if (state === 'done') studioSpawn(key, i);
   const c = document.getElementById('ed-gen-count');
   paintOverall();
+  paintStages();
   const txt = document.getElementById('overall-txt');
   if (c && txt) c.textContent = txt.textContent.replace(' done', '').split(' · ')[0];
 }
