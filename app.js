@@ -1621,7 +1621,10 @@ function setMember(key, state, label) {
   if (mini) {
     mini.className = 'card is-' + state;
     const deck = document.getElementById('ed-crew');
-    if (deck && deck._go && state === 'review') deck._go(JOBS.findIndex((j) => j.key === key));
+    if (deck && deck._front) {
+      if (state === 'review') deck._front(key);
+      else if (!document.querySelector('.card.is-review')) deck._release();
+    }
   }
 }
 function unmountCrewStage() {
@@ -2030,31 +2033,54 @@ function crewDeck() {
       ${JOBS.map((j) => `
         <article class="card" id="mini-${j.key}">
           <span class="card__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
-          <div class="card__body">
-            <b>${j.name}</b>
-            <em id="mini-${j.key}-doing">waiting</em>
-            <span class="card__bar"><i id="deckfill-${j.key}"></i></span>
-          </div>
+          <b>${j.name}</b>
+          <em id="mini-${j.key}-doing">waiting</em>
+          <span class="card__bar"><i id="deckfill-${j.key}"></i></span>
+          <button class="card__cta">Confirm the next step →</button>
         </article>`).join('')}
     </div></div>
     <button class="deck__nav deck__nav--next" aria-label="Next">›</button>
     <div class="deck__dots" id="deck-dots">
       ${JOBS.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}
     </div>`;
+  const track = deck.querySelector('#deck-track');
   let at = 0;
   const go = (n) => {
-    at = (n + JOBS.length) % JOBS.length;
-    deck.querySelector('#deck-track').style.transform = `translateX(${-at * 100}%)`;
+    const cards = track.children;
+    at = (n + cards.length) % cards.length;
+    track.style.transform = `translateX(${-at * 100}%)`;
     deck.querySelectorAll('#deck-dots i').forEach((d, i) => d.classList.toggle('is-on', i === at));
   };
-  let timer = setInterval(() => go(at + 1), 3400);
-  const bump = () => { clearInterval(timer); timer = setInterval(() => go(at + 1), 6000); };
-  deck.querySelector('.deck__nav--prev').onclick = () => { go(at - 1); bump(); };
-  deck.querySelector('.deck__nav--next').onclick = () => { go(at + 1); bump(); };
-  deck.querySelectorAll('#deck-dots i').forEach((d, i) => { d.onclick = () => { go(i); bump(); }; });
-  deck.addEventListener('mouseenter', () => clearInterval(timer));
-  deck.addEventListener('mouseleave', () => { timer = setInterval(() => go(at + 1), 3400); });
-  deck._go = go;
+  // Auto-advance every 10s, unless someone is waiting on an answer.
+  let timer = null;
+  const stop = () => { clearInterval(timer); timer = null; };
+  const play = (ms) => { stop(); if (!deck._hold) timer = setInterval(() => go(at + 1), ms || 10000); };
+  const step = (n) => { go(n); play(14000); };
+  deck.querySelector('.deck__nav--prev').onclick = () => step(at - 1);
+  deck.querySelector('.deck__nav--next').onclick = () => step(at + 1);
+  deck.querySelectorAll('#deck-dots i').forEach((d, i) => { d.onclick = () => step(i); });
+  deck.addEventListener('mouseenter', stop);
+  deck.addEventListener('mouseleave', () => play());
+  // Whoever needs a call cuts to the front and holds there until you answer.
+  deck._front = (key) => {
+    const card = document.getElementById('mini-' + key);
+    if (!card) return;
+    deck._hold = true;
+    stop();
+    track.prepend(card);
+    go(0);
+  };
+  deck._release = () => { deck._hold = false; play(); };
+  deck.querySelectorAll('.card__cta').forEach((b) => {
+    b.onclick = () => {
+      const chips = document.querySelector('.replies');
+      if (!chips) return;
+      chips.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      chips.classList.add('is-flag');
+      setTimeout(() => chips.classList.remove('is-flag'), 1600);
+    };
+  });
+  play();
   return deck;
 }
 

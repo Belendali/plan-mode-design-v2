@@ -1788,3 +1788,53 @@ body{
 .card__face{width:62px;height:62px}
 .card__body b{font-size:15px}
 .card__body em{font-size:12.5px}
+
+/* ── Crew deck, v2: centred, one Wana at a time ──────────────────── */
+.ed.is-locked .ed__vp::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:radial-gradient(70% 60% at 50% 50%,rgba(8,6,12,.66),rgba(8,6,12,.28) 70%,rgba(8,6,12,0));
+}
+.deck{
+  position:absolute;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);z-index:4;
+  display:flex;align-items:center;gap:14px;padding:0;border:0;background:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;
+}
+.deck__win{width:460px;overflow:hidden;border-radius:22px;
+  background:rgba(14,10,20,.58);border:1px solid rgba(255,255,255,.13);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 26px 70px rgba(0,0,0,.55)}
+.deck__track{display:flex;transition:transform .45s cubic-bezier(.2,.85,.3,1)}
+.card{
+  flex:0 0 100%;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:22px 26px 24px;margin:0;text-align:center;box-sizing:border-box;
+}
+.card__face{width:auto;height:190px;border-radius:0;background:none;overflow:visible;
+  display:grid;place-items:center}
+.card__face img{width:auto;height:190px;object-fit:contain;transform:none}
+.card.is-working .card__face img{animation:none}
+.card b{font-size:18px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.card em{font-style:normal;font-size:13.5px;color:rgba(255,255,255,.6);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card.is-working em{color:#FF8A3D}
+.card.is-review em{color:#FFD666}
+.card.is-done em{color:var(--lime)}
+.card__bar{width:220px;height:4px;margin-top:8px;border-radius:2px;
+  background:rgba(255,255,255,.14);overflow:hidden;display:block}
+.card__cta{
+  display:none;margin-top:12px;padding:9px 18px;border:0;border-radius:11px;cursor:pointer;
+  background:#FFD666;color:#20180A;font-size:13px;font-weight:600;font-family:inherit;
+}
+.card.is-review .card__cta{display:block;animation:ctaPulse 1.9s ease-in-out infinite}
+.card__cta:hover{background:#FFE49A}
+@keyframes ctaPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,214,102,.5)}
+  50%{box-shadow:0 0 0 9px rgba(255,214,102,0)}
+}
+.deck__nav{width:34px;height:34px;border-radius:11px;font-size:18px;
+  background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.deck__dots{bottom:-20px}
+.replies.is-flag{animation:flagBlink 1.6s ease}
+@keyframes flagBlink{
+  0%,100%{filter:none}
+  25%,75%{filter:drop-shadow(0 0 12px rgba(255,214,102,.85))}
+}
