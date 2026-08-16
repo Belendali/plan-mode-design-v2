@@ -1590,10 +1590,19 @@ function mountCrewStage(only) {
 }
 function setMember(key, state, label) {
   const m = document.getElementById('mem-' + key);
-  if (!m) return;
-  m.className = 'member is-' + state;
-  const s = m.querySelector('.member__state');
-  if (s) s.textContent = label || state;
+  if (m) {
+    m.className = 'member is-' + state;
+    const s = m.querySelector('.member__state');
+    if (s) s.textContent = label || state;
+  }
+  const col = document.getElementById('col-' + key);
+  if (col) col.className = 'col is-' + state;
+  const d = document.getElementById('doing-' + key);
+  if (d) d.textContent = label || state;
+  const md = document.getElementById(`mini-${key}-doing`);
+  if (md) md.textContent = label || state;
+  const mini = document.getElementById('mini-' + key);
+  if (mini) mini.className = 'mini is-' + state;
 }
 function unmountCrewStage() {
   const s = document.getElementById('crewstage');
@@ -1744,6 +1753,8 @@ async function runJob(job, build) {
 function setProgress(key, pct) {
   const bar = document.querySelector(`#mem-${key} .member__fill`);
   if (bar) bar.style.width = pct + '%';
+  const f = document.getElementById('fill-' + key);
+  if (f) f.style.width = pct + '%';
 }
 
 async function screenBuildParallel() {
@@ -1755,18 +1766,23 @@ async function screenBuildParallel() {
   switchEl.classList.add('is-on');
   input.placeholder = 'Click Stop to cancel…';
 
+  const first = !document.getElementById('studio')?.classList.contains('is-built');
   mountStudio();
-  showTab('studio');
   const build = mountBuild();
   build.classList.add('is-art');
-  openGenerating();
+  setGenerating(true);
+  const sub = document.getElementById('crew-sub');
+  if (sub) sub.textContent = "Five Wanas working at once. They'll stop and ask if they need a call.";
+  JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
+  paintOverall();
+  // nothing to play yet on the first run, so take them to the work
+  if (first) showTab('tasks');
   // the crew on the floor replaces the little side panel entirely
   const mp = document.getElementById('miniplan');
   if (mp) mp.remove();
   const bs = document.getElementById('build-status');
   if (bs) bs.remove();
-  const stage = mountCrewStage(JOBS.map((j) => j.key));
-  stage.classList.add('is-lit', 'is-working');
+  // the Tasks board carries the crew now — no second row of cats
 
   push(el('div', 'msg msg--user', BUILD_PROMPT));
   await wait(500);
@@ -1776,10 +1792,10 @@ async function screenBuildParallel() {
   await Promise.all(JOBS.map((j) => runJob(j, build)));
 
   build.classList.add('is-test');
-  const sub = document.getElementById('crew-sub');
-  if (sub) sub.textContent = 'All five finished — opening Preview.';
+  const sub2 = document.getElementById('crew-sub');
+  if (sub2) sub2.textContent = 'Version 1.0 shipped. Everything below is what each of them delivered.';
   await wait(900);
-  closeGenerating();
+  setGenerating(false);
   markBuilt();
   await wait(400);
   const sum = el('div', 'summary');
@@ -1814,9 +1830,10 @@ async function screenBuildParallel() {
 // ── Studio shell ──────────────────────────────────────────────────
 // Five full-height views behind one tab bar. Nothing here is a screenshot.
 const TABS = [
-  { key: 'studio',  label: 'Studio',  icon: '◍' },
-  { key: 'assets',  label: 'Assets',  icon: '▦' },
-  { key: 'code',    label: 'Code',    icon: '‹›' },
+  { key: 'studio', label: 'Studio', icon: '◍' },
+  { key: 'tasks',  label: 'Tasks',  icon: '☰' },
+  { key: 'assets', label: 'Assets', icon: '▦' },
+  { key: 'code',   label: 'Code',   icon: '‹›' },
 ];
 
 const ASSETS_LIB = [
@@ -1872,37 +1889,102 @@ function markBuilt() {
   showTab('preview');
 }
 
-// While the crew generates, they take over the Studio behind a dark veil.
-function openGenerating() {
-  let g = document.getElementById('gen');
-  if (g) return g;
-  g = el('div', 'gen');
-  g.id = 'gen';
-  g.innerHTML = `
-    <div class="gen__head">
-      <div>
-        <h2>The crew is building it</h2>
-        <p id="crew-sub">Five Wanas working at once. They'll stop and ask if they need a call.</p>
+// One board, five columns — each Wana owns its own list.
+function tasksView() {
+  return `
+    <div class="pane pane--tasks">
+      <div class="pane__head pane__head--crew">
+        <div>
+          <h2>Tasks</h2>
+          <p id="crew-sub">Game Plan 1.0 · queued. The crew starts once you approve it.</p>
+        </div>
+        <div class="overall">
+          <div class="overall__bar"><i id="overall-fill"></i></div>
+          <span class="overall__txt" id="overall-txt">0 of 18 done</span>
+        </div>
       </div>
-      <div class="overall">
-        <div class="overall__bar"><i id="overall-fill"></i></div>
-        <span class="overall__txt" id="overall-txt">0 of 0 done</span>
+      <div class="kanban">
+        ${JOBS.map((j) => `
+          <section class="col is-idle" id="col-${j.key}">
+            <header class="col__head">
+              <span class="col__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
+              <span class="col__who">
+                <b>${j.name.replace(' Wana', '')}</b>
+                <em id="doing-${j.key}">waiting</em>
+              </span>
+            </header>
+            <div class="col__bar"><i class="col__fill" id="fill-${j.key}"></i></div>
+            <div class="col__tasks">
+              ${j.steps.map((st, i) => `
+                <div class="task" id="task-${j.key}-${i}">
+                  <span class="task__dot"></span><span>${st}</span></div>`).join('')}
+            </div>
+          </section>`).join('')}
       </div>
-    </div>
-    <div class="gen__body">
-      <aside class="tasks" id="tasks"></aside>
-      <div class="crewfloor" id="crewfloor"></div>
     </div>`;
-  document.getElementById('views').appendChild(g);
-  mountTasks();
-  mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
-  JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
-  paintOverall();
-  return g;
 }
-function closeGenerating() {
-  const g = document.getElementById('gen');
-  if (g) { g.classList.add('is-leaving'); setTimeout(() => g.remove(), 420); }
+
+// The Studio stays visible and keeps updating; it just stops taking edits.
+function setGenerating(on) {
+  const ed = document.querySelector('.ed');
+  const s = document.getElementById('studio');
+  if (!ed || !s) return;
+  ed.classList.toggle('is-locked', on);
+  // the scene is worth watching while it fills, so it leaves its empty state early
+  s.classList.toggle('is-generating', on);
+  s.querySelector('.tab[data-tab="tasks"]').classList.toggle('is-live', on);
+  let bar = document.getElementById('ed-gen');
+  if (on && !bar) {
+    bar = el('div', 'ed__gen');
+    bar.id = 'ed-gen';
+    bar.innerHTML = `
+      <i class="breath"></i>
+      <span>Crew is building — editing is locked</span>
+      <b id="ed-gen-count">0 of 18</b>
+      <button id="ed-gen-go">View tasks →</button>`;
+    ed.querySelector('.ed__vp').appendChild(bar);
+    bar.querySelector('#ed-gen-go').onclick = () => showTab('tasks');
+    const strip = el('div', 'ed__crew');
+    strip.id = 'ed-crew';
+    strip.innerHTML = JOBS.map((j) => `
+      <span class="mini" id="mini-${j.key}">
+        <img src="assets/crew-${j.key}.webp" alt="">
+        <em id="mini-${j.key}-doing">waiting</em></span>`).join('');
+    ed.querySelector('.ed__vp').appendChild(strip);
+  }
+  if (!on) {
+    document.getElementById('ed-gen')?.remove();
+    document.getElementById('ed-crew')?.remove();
+  }
+}
+
+// Objects land in the scene as the work lands.
+const SPAWN = {
+  developer: [['Road mesh', 'mesh'], ['Drive rig', 'group'], ['Coin ×24', 'mesh'], ['Escape trigger', 'group']],
+  artist: [['Night sky', 'light'], ['Block A · brownstone', 'mesh'], ['Wet asphalt', 'mesh'], ['Neon signage', 'light']],
+  audio: [['Engine source', 'group'], ['Pickup SFX', 'group'], ['Siren source', 'group'], ['Ambience bed', 'group']],
+  tester: [['Test route', 'group'], ['Balance probe', 'group'], ['Run recorder', 'group']],
+  marketing: [['Title card', 'group'], ['Cover shot', 'group'], ['Store copy', 'group']],
+};
+function studioSpawn(key, i) {
+  const tree = document.querySelector('.ed__tree');
+  const vp = document.querySelector('.ed__grid .ed__spawned');
+  const item = (SPAWN[key] || [])[i];
+  if (!item || !tree) return;
+  const b = el('button', 'node ' + item[1] + ' is-new', `<i></i>${item[0]}`);
+  b.style.paddingLeft = '22px';
+  tree.appendChild(b);
+  if (vp) {
+    const n = vp.children.length;
+    const x = 180 + (n % 5) * 150 + (n % 2) * 30;
+    const y = 380 + Math.floor(n / 5) * 96;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'ed__box is-new');
+    g.innerHTML = `<path d="M${x} ${y} L${x + 74} ${y - 20} L${x + 74} ${y + 34} L${x} ${y + 58} Z"/>
+      <path d="M${x + 74} ${y - 20} L${x + 136} ${y} L${x + 136} ${y + 52} L${x + 74} ${y + 34} Z"/>
+      <path d="M${x} ${y} L${x + 74} ${y - 20} L${x + 136} ${y} L${x + 60} ${y + 20} Z"/>`;
+    vp.appendChild(g);
+  }
 }
 
 function mountStudio() {
@@ -1932,6 +2014,7 @@ function mountStudio() {
         ${emptyState('assets')}<div class="built">${assetsView()}</div></section>
       <section class="view view--code" data-view="code">
         ${emptyState('code')}<div class="built">${codeView()}</div></section>
+      <section class="view view--tasks" data-view="tasks">${tasksView()}</section>
       <section class="view view--preview" data-view="preview">${previewView()}</section>
     </div>
   `;
@@ -2061,7 +2144,11 @@ function mountTasks() {
 function setTask(key, i, state) {
   const t = document.getElementById(`task-${key}-${i}`);
   if (t) t.className = 'task is-' + state;
+  if (state === 'done') studioSpawn(key, i);
+  const c = document.getElementById('ed-gen-count');
   paintOverall();
+  const txt = document.getElementById('overall-txt');
+  if (c && txt) c.textContent = txt.textContent.replace(' done', '').split(' · ')[0];
 }
 // one line that answers "how far along is this build?"
 function paintOverall() {
@@ -2147,6 +2234,7 @@ function studioView() {
             <path d="M430 600 L560 570 L560 640 L430 674 Z"/><path d="M560 570 L672 600 L672 668 L560 640 Z"/>
             <path d="M430 600 L560 570 L672 600 L546 632 Z"/>
           </g>
+          <g class="ed__spawned"></g>
           <g class="ed__giz" transform="translate(546 616)">
             <line x1="0" y1="0" x2="132" y2="34" class="gx"/><polygon points="132,26 154,34 132,42" class="gx-f"/>
             <line x1="0" y1="0" x2="0" y2="-118" class="gy"/><polygon points="-8,-118 0,-140 8,-118" class="gy-f"/>
@@ -2306,7 +2394,6 @@ if (QUERY.includes('studio')) {
   const t = (QUERY.match(/tab=(\w+)/) || [])[1];
   if (t) {
     markBuilt();
-    if (t === 'crew') { openGenerating(); }
     // a snapshot mid-build, so every state is visible at once
     setMember('developer', 'done', 'Core loop wired');   setProgress('developer', 100);
     setMember('artist', 'working', 'Neon pass');          setProgress('artist', 72);

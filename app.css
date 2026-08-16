@@ -719,7 +719,7 @@ body{
 /* ── Demo control for the second-time experience ──────────────────── */
 /* Clear of the Studio panels, and obviously a demo control rather than product UI */
 .trialflag{
-  position:absolute;left:336px;bottom:20px;z-index:9;
+  position:absolute;left:20px;bottom:20px;z-index:9;
   display:flex;align-items:center;gap:9px;
   padding:9px 14px 9px 12px;border-radius:12px;cursor:pointer;
   background:rgba(10,8,10,.82);border:1px dashed rgba(255,255,255,.28);
@@ -1521,3 +1521,83 @@ body{
 /* the newly unlocked tab announces itself once */
 .tab--new{animation:tabPop .6s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes tabPop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+
+/* ── Tasks — one column per Wana ─────────────────────────────────── */
+.pane--tasks{display:flex;flex-direction:column;overflow:hidden}
+.kanban{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.col{
+  display:flex;flex-direction:column;padding:14px;border-radius:14px;min-height:0;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);
+  transition:border-color .3s,background .3s,opacity .3s;
+}
+.col.is-idle{opacity:.6}
+.col.is-working{background:rgba(255,138,61,.07);border-color:rgba(255,138,61,.35)}
+.col.is-review{background:rgba(255,214,102,.09);border-color:rgba(255,214,102,.5)}
+.col.is-done{border-color:rgba(192,240,0,.35)}
+.col__head{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.col__face{width:52px;height:52px;border-radius:50%;flex:none;overflow:hidden;background:#3a3536;
+  display:grid;place-items:center}
+.col__face img{width:132%;height:132%;object-fit:contain;transform:translateY(4%)}
+.col.is-working .col__face img{animation:memberBob 2.4s ease-in-out infinite}
+.col__who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.col__who b{font-size:14px;font-weight:600;color:#fff}
+.col__who em{font-style:normal;font-size:11px;color:rgba(255,255,255,.5);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+.col.is-working .col__who em{color:#FF8A3D}
+.col.is-review .col__who em{color:#FFD666}
+.col__bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:12px}
+.col__fill{display:block;height:100%;width:0;border-radius:2px;background:var(--lime);
+  transition:width .6s cubic-bezier(.2,.8,.3,1)}
+.col.is-working .col__fill{background:#FF8A3D}
+.col.is-review .col__fill{background:#FFD666}
+.col__tasks{display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:none}
+.col__tasks::-webkit-scrollbar{display:none}
+.tab.is-live::after{
+  content:'';width:6px;height:6px;border-radius:50%;background:#FF8A3D;
+  animation:pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Studio while the crew works: read-only, still watchable ─────── */
+.ed.is-locked .ed__tools button,.ed.is-locked .node{opacity:.4;pointer-events:none}
+.ed.is-locked .ed__inspector{opacity:.45;pointer-events:none}
+.ed__gen{
+  position:absolute;left:50%;transform:translateX(-50%);top:16px;z-index:4;
+  display:flex;align-items:center;gap:12px;padding:9px 12px 9px 14px;border-radius:13px;
+  background:rgba(14,11,18,.9);border:1px solid rgba(255,138,61,.35);
+  backdrop-filter:blur(10px);font-size:13px;color:rgba(255,255,255,.85);
+}
+.breath{width:9px;height:9px;border-radius:50%;background:#FF8A3D;flex:none;
+  box-shadow:0 0 0 0 rgba(255,138,61,.5);animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,138,61,.55);opacity:.75}
+  50%{box-shadow:0 0 0 9px rgba(255,138,61,0);opacity:1}
+}
+.ed__gen b{font-family:var(--font-mono);font-size:12px;font-weight:400;color:rgba(255,255,255,.55)}
+.ed__gen button{
+  height:28px;padding:0 12px;border-radius:9px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.1);color:#fff;font-family:var(--font);font-size:12.5px;
+}
+.ed__gen button:hover{background:rgba(255,255,255,.2)}
+.ed__crew{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:4;
+  display:flex;gap:8px;padding:8px;border-radius:14px;
+  background:rgba(14,11,18,.86);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);
+}
+.mini{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:10px;
+  background:rgba(255,255,255,.05);opacity:.5;transition:all .3s}
+.mini img{width:26px;height:26px;border-radius:50%;background:#3a3536;object-fit:contain}
+.mini em{font-style:normal;font-size:11px;color:rgba(255,255,255,.6);max-width:120px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini.is-working{opacity:1;background:rgba(255,138,61,.14)}
+.mini.is-working em{color:#FF8A3D}
+.mini.is-review{opacity:1;background:rgba(255,214,102,.16)}
+.mini.is-review em{color:#FFD666}
+.mini.is-done{opacity:.85}
+.mini.is-done em{color:var(--lime)}
+/* objects arriving in the scene */
+.ed__box.is-new,.node.is-new{animation:spawnIn .5s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes spawnIn{from{opacity:0;transform:translateY(-8px) scale(.94)}to{opacity:1;transform:none}}
+
+/* the Studio drops its empty state the moment work starts */
+.studio2.is-generating .view--studio .empty{display:none}
+.studio2.is-generating .view--studio .built{opacity:1;pointer-events:auto}
