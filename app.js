@@ -1312,6 +1312,7 @@ async function runMention(text) {
   await wait(900);
 
   const wantsDesert = /desert|沙漠|dune/i.test(hit.ask);
+  const scene = document.getElementById('ed-scene');
   if (c.key === 'art' && wantsDesert && build) {
     const STEPS_ART = [
       { label: 'Swap the sky — night → desert dusk', cls: 'ds-sky',     line: 'Sky swapped: desert dusk ✓' },
@@ -1325,6 +1326,7 @@ async function runMention(text) {
       setStatus(STEPS_ART[i].label + '…', false);
       await wait(560);
       build.classList.add('is-' + STEPS_ART[i].cls);
+      if (scene) scene.classList.add('is-desert');   // the editor changes with the game
       await wait(700);
       setSubtask(i, 'done');
       readLine(STEPS_ART[i].line);
@@ -1616,7 +1618,11 @@ function setMember(key, state, label) {
   const md = document.getElementById(`mini-${key}-doing`);
   if (md) md.textContent = label || state;
   const mini = document.getElementById('mini-' + key);
-  if (mini) mini.className = 'mini is-' + state;
+  if (mini) {
+    mini.className = 'card is-' + state;
+    const deck = document.getElementById('ed-crew');
+    if (deck && deck._go && state === 'review') deck._go(JOBS.findIndex((j) => j.key === key));
+  }
 }
 function unmountCrewStage() {
   const s = document.getElementById('crewstage');
@@ -1769,6 +1775,8 @@ function setProgress(key, pct) {
   if (bar) bar.style.width = pct + '%';
   const f = document.getElementById('fill-' + key);
   if (f) f.style.width = pct + '%';
+  const d2 = document.getElementById('deckfill-' + key);
+  if (d2) d2.style.width = pct + '%';
 }
 
 async function screenBuildParallel() {
@@ -2004,18 +2012,50 @@ function setGenerating(on) {
       <button id="ed-gen-go">View tasks →</button>`;
     ed.querySelector('.ed__vp').appendChild(bar);
     bar.querySelector('#ed-gen-go').onclick = () => showTab('tasks');
-    const strip = el('div', 'ed__crew');
-    strip.id = 'ed-crew';
-    strip.innerHTML = JOBS.map((j) => `
-      <span class="mini" id="mini-${j.key}">
-        <img src="assets/crew-${j.key}.webp" alt="">
-        <em id="mini-${j.key}-doing">waiting</em></span>`).join('');
-    ed.querySelector('.ed__vp').appendChild(strip);
+    ed.querySelector('.ed__vp').appendChild(crewDeck());
   }
   if (!on) {
     document.getElementById('ed-gen')?.remove();
     document.getElementById('ed-crew')?.remove();
   }
+}
+
+// One Wana at a time, on a veil over the scene — swipe or let it rotate.
+function crewDeck() {
+  const deck = el('div', 'deck');
+  deck.id = 'ed-crew';
+  deck.innerHTML = `
+    <button class="deck__nav deck__nav--prev" aria-label="Previous">‹</button>
+    <div class="deck__win"><div class="deck__track" id="deck-track">
+      ${JOBS.map((j) => `
+        <article class="card" id="mini-${j.key}">
+          <span class="card__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
+          <div class="card__body">
+            <b>${j.name}</b>
+            <em id="mini-${j.key}-doing">waiting</em>
+            <span class="card__bar"><i id="deckfill-${j.key}"></i></span>
+          </div>
+        </article>`).join('')}
+    </div></div>
+    <button class="deck__nav deck__nav--next" aria-label="Next">›</button>
+    <div class="deck__dots" id="deck-dots">
+      ${JOBS.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}
+    </div>`;
+  let at = 0;
+  const go = (n) => {
+    at = (n + JOBS.length) % JOBS.length;
+    deck.querySelector('#deck-track').style.transform = `translateX(${-at * 100}%)`;
+    deck.querySelectorAll('#deck-dots i').forEach((d, i) => d.classList.toggle('is-on', i === at));
+  };
+  let timer = setInterval(() => go(at + 1), 3400);
+  const bump = () => { clearInterval(timer); timer = setInterval(() => go(at + 1), 6000); };
+  deck.querySelector('.deck__nav--prev').onclick = () => { go(at - 1); bump(); };
+  deck.querySelector('.deck__nav--next').onclick = () => { go(at + 1); bump(); };
+  deck.querySelectorAll('#deck-dots i').forEach((d, i) => { d.onclick = () => { go(i); bump(); }; });
+  deck.addEventListener('mouseenter', () => clearInterval(timer));
+  deck.addEventListener('mouseleave', () => { timer = setInterval(() => go(at + 1), 3400); });
+  deck._go = go;
+  return deck;
 }
 
 // Objects land in the scene as the work lands.
@@ -2336,9 +2376,31 @@ function studioView() {
             </linearGradient>
             <radialGradient id="scLamp"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".5"/>
               <stop offset="1" stop-color="#FFE9A8" stop-opacity="0"/></radialGradient>
+            <linearGradient id="scDusk" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#160C30"/><stop offset=".45" stop-color="#5E2350"/>
+              <stop offset=".78" stop-color="#B8452A"/><stop offset="1" stop-color="#D98443"/>
+            </linearGradient>
+            <radialGradient id="scSun"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".85"/>
+              <stop offset="1" stop-color="#FFB35C" stop-opacity="0"/></radialGradient>
           </defs>
 
           <rect class="sc-sky" width="1100" height="900" fill="url(#scSky)"/>
+          <g class="sc-desert">
+            <rect width="1100" height="900" fill="url(#scDusk)"/>
+            <circle cx="550" cy="470" r="180" fill="url(#scSun)"/>
+            <circle cx="550" cy="452" r="46" fill="#FFD98A"/>
+            <rect x="0" y="470" width="1100" height="430" fill="#9C5F35"/>
+            <path d="M-40 470 q180 -110 380 -54 q170 48 300 12 q180 -50 500 40 L1140 900 L-40 900 Z" fill="#7A431F" opacity=".9"/>
+            <path d="M-40 560 q240 -90 470 -20 q200 60 380 -6 q140 -50 330 26 L1140 900 L-40 900 Z" fill="#A3603A" opacity=".95"/>
+            ${[[160, 690, 1], [880, 660, .85], [1010, 730, 1.1]].map(([x, y, k]) => `
+              <g transform="translate(${x} ${y}) scale(${k})">
+                <rect x="-11" y="-112" width="22" height="112" rx="11" fill="#2F5D42"/>
+                <rect x="-40" y="-86" width="16" height="52" rx="8" fill="#2F5D42"/>
+                <rect x="-40" y="-86" width="16" height="16" rx="8" fill="#2F5D42"/>
+                <rect x="24" y="-98" width="16" height="60" rx="8" fill="#2F5D42"/>
+                <rect x="24" y="-98" width="16" height="16" rx="8" fill="#2F5D42"/>
+              </g>`).join('')}
+          </g>
           <g class="sc-grid">${grid}</g>
           <rect width="1100" height="330" fill="url(#scFade)"/>
 
