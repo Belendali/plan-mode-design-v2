@@ -1838,3 +1838,17 @@ body{
   0%,100%{filter:none}
   25%,75%{filter:drop-shadow(0 0 12px rgba(255,214,102,.85))}
 }
+
+/* a line at the top of the card for the job it belongs to */
+.card__top{
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:rgba(255,255,255,.42);
+}
+.card__stage{font-weight:600}
+.card__ticks{display:flex;gap:4px}
+.card__ticks i{width:14px;height:3px;border-radius:2px;background:rgba(255,255,255,.16);display:block;
+  transition:background .4s ease}
+.card__ticks i.is-running{background:#FF8A3D}
+.card__ticks i.is-review{background:#FFD666}
+.card__ticks i.is-done{background:var(--lime)}
