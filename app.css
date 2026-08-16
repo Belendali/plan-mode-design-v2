@@ -1499,3 +1499,25 @@ body{
 .built{position:absolute;inset:0;opacity:0;pointer-events:none}
 .studio2.is-built .empty{display:none}
 .studio2.is-built .built{opacity:1;pointer-events:auto;animation:loginIn .5s ease}
+
+/* ── Generating — the crew takes over the Studio ─────────────────── */
+.gen{
+  position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;padding:26px 30px;
+  background:rgba(6,4,9,.72);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  animation:loginIn .45s ease;
+}
+.gen.is-leaving{opacity:0;transition:opacity .4s ease;pointer-events:none}
+.gen__head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:20px}
+.gen__head h2{margin:0 0 4px;font-size:22px;font-weight:600;color:#fff}
+.gen__head p{margin:0;font-size:13.5px;color:rgba(255,255,255,.55)}
+.gen__body{flex:1;min-height:0;display:flex;gap:22px}
+.gen .tasks{background:rgba(255,255,255,.05)}
+.gen .crewfloor{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:18px}
+.gen .crewstage{position:static;width:auto;height:auto;padding:0;animation:none;
+  display:flex;align-items:center;justify-content:center;gap:18px}
+.gen .crewstage .member{width:168px}
+.gen .crewstage .member img{width:130px;height:130px}
+/* the newly unlocked tab announces itself once */
+.tab--new{animation:tabPop .6s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes tabPop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}

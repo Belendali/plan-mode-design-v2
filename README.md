@@ -54,14 +54,17 @@ Six views behind one tab bar, all real markup — the export-screenshot chrome i
 
 | Tab | What it is |
 |---|---|
-| **Preview** | The generated game, with the title screen and control hints |
 | **Studio** | Scene editor — outliner, transform gizmo, inspector, grid viewport |
-| **PR** | What Marketing shipped: key art, store copy, share links |
 | **Assets** | Everything Artist and Audio made, with build status per item |
 | **Code** | Developer's files, with the pursuit system open |
-| **Crew** | Task list for this build plus every Wana's live state |
+| **Preview** | The game itself — **appears only once there is a playable build** |
 
-`?studio&tab=<key>` opens any of them directly.
+Before the first build every view is an empty state: there is no game to preview, no
+assets, no code. Generating does not get a tab of its own — the crew takes over the
+Studio behind a dark veil, with the task board on one side and every Wana's progress on
+the other. When they finish, the veil lifts and Preview unlocks.
+
+`?studio&tab=<key>` opens any of them directly; `?build` runs the parallel build.
 
 ## Structure
 

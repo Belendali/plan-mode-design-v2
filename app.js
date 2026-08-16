@@ -1607,7 +1607,7 @@ const TOUR = [
   { cat: 'idle', focus: 'chat', at: 'left',
     copy: "Tell me what you want right here. I've got a whole crew of cat engineers to plan it out and walk you from nothing to something you can play." },
   { cat: 'idle', focus: 'edit', at: 'right',
-    copy: "And this side is yours. Move things, swap models, light the scene — this is a real studio, so you can always take the wheel yourself." },
+    copy: "And this is your Studio. Move things, swap models, light the scene — the crew fills it in, and you can always take the wheel yourself." },
   { cat: 'idle', focus: null, at: 'aside', crew: true,
     copy: "Now come meet my crew. Every one of them is a specialist, and they'll be with you the whole way." },
 ];
@@ -1756,11 +1756,10 @@ async function screenBuildParallel() {
   input.placeholder = 'Click Stop to cancel…';
 
   mountStudio();
+  showTab('studio');
   const build = mountBuild();
   build.classList.add('is-art');
-  showTab('crew');
-  document.querySelector('.tab[data-tab="crew"]').classList.add('has-work');
-  mountTasks();
+  openGenerating();
   // the crew on the floor replaces the little side panel entirely
   const mp = document.getElementById('miniplan');
   if (mp) mp.remove();
@@ -1777,12 +1776,11 @@ async function screenBuildParallel() {
   await Promise.all(JOBS.map((j) => runJob(j, build)));
 
   build.classList.add('is-test');
-  markBuilt();
-  document.querySelector('.tab[data-tab="crew"]').classList.remove('has-work');
   const sub = document.getElementById('crew-sub');
-  if (sub) sub.textContent = 'All five finished. The build is in Preview.';
-  mountPreviewGame();
-  showTab('preview');
+  if (sub) sub.textContent = 'All five finished — opening Preview.';
+  await wait(900);
+  closeGenerating();
+  markBuilt();
   await wait(400);
   const sum = el('div', 'summary');
   sum.innerHTML = `
@@ -1816,11 +1814,9 @@ async function screenBuildParallel() {
 // ── Studio shell ──────────────────────────────────────────────────
 // Five full-height views behind one tab bar. Nothing here is a screenshot.
 const TABS = [
-  { key: 'preview', label: 'Preview', icon: '▷' },
   { key: 'studio',  label: 'Studio',  icon: '◍' },
   { key: 'assets',  label: 'Assets',  icon: '▦' },
   { key: 'code',    label: 'Code',    icon: '‹›' },
-  { key: 'crew',    label: 'Crew',    icon: '☰' },
 ];
 
 const ASSETS_LIB = [
@@ -1859,12 +1855,54 @@ function emptyState(key) {
     <h3>${title}</h3><p>${body}</p></div>`;
 }
 // Flips every view from "nothing here" to the finished build.
+// A playable build unlocks the Preview tab — it has nothing to show before that.
 function markBuilt() {
   const s = document.getElementById('studio');
   if (!s) return;
   s.classList.add('is-built');
+  const nav = document.getElementById('tabs');
+  if (!nav.querySelector('[data-tab="preview"]')) {
+    const b = el('button', 'tab tab--new', '<i>▷</i>Preview');
+    b.dataset.tab = 'preview';
+    b.onclick = () => showTab('preview');
+    nav.insertBefore(b, nav.firstChild);
+  }
   mountPreviewGame();
   wirePreview();
+  showTab('preview');
+}
+
+// While the crew generates, they take over the Studio behind a dark veil.
+function openGenerating() {
+  let g = document.getElementById('gen');
+  if (g) return g;
+  g = el('div', 'gen');
+  g.id = 'gen';
+  g.innerHTML = `
+    <div class="gen__head">
+      <div>
+        <h2>The crew is building it</h2>
+        <p id="crew-sub">Five Wanas working at once. They'll stop and ask if they need a call.</p>
+      </div>
+      <div class="overall">
+        <div class="overall__bar"><i id="overall-fill"></i></div>
+        <span class="overall__txt" id="overall-txt">0 of 0 done</span>
+      </div>
+    </div>
+    <div class="gen__body">
+      <aside class="tasks" id="tasks"></aside>
+      <div class="crewfloor" id="crewfloor"></div>
+    </div>`;
+  document.getElementById('views').appendChild(g);
+  mountTasks();
+  mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
+  JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
+  paintOverall();
+  return g;
+}
+function closeGenerating() {
+  const g = document.getElementById('gen');
+  if (g) { g.classList.add('is-leaving'); setTimeout(() => g.remove(), 420); }
 }
 
 function mountStudio() {
@@ -1888,24 +1926,18 @@ function mountStudio() {
       </div>
     </header>
     <div class="views" id="views">
-      <section class="view view--preview" data-view="preview">
-        ${emptyState('preview')}<div class="built">${previewView()}</div></section>
       <section class="view view--studio" data-view="studio">
         ${emptyState('studio')}<div class="built">${studioView()}</div></section>
       <section class="view view--assets" data-view="assets">
         ${emptyState('assets')}<div class="built">${assetsView()}</div></section>
       <section class="view view--code" data-view="code">
         ${emptyState('code')}<div class="built">${codeView()}</div></section>
-      <section class="view view--crew" data-view="crew">${crewView()}</section>
+      <section class="view view--preview" data-view="preview">${previewView()}</section>
     </div>
   `;
   document.getElementById('stage').insertBefore(s, document.querySelector('.panel'));
   s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
-  mountTasks();
-  mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
-  JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
-  paintOverall();
-  showTab('preview');
+  showTab('studio');
   return s;
 }
 
@@ -2274,6 +2306,7 @@ if (QUERY.includes('studio')) {
   const t = (QUERY.match(/tab=(\w+)/) || [])[1];
   if (t) {
     markBuilt();
+    if (t === 'crew') { openGenerating(); }
     // a snapshot mid-build, so every state is visible at once
     setMember('developer', 'done', 'Core loop wired');   setProgress('developer', 100);
     setMember('artist', 'working', 'Neon pass');          setProgress('artist', 72);
