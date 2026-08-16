@@ -1890,3 +1890,5 @@ body{
 /* four-step and three-step crews share one card height, so rotating is calm */
 .card__steps{min-height:90px;justify-content:flex-start}
 .card__cta{margin-top:10px}
+/* a single-Wana rework has nothing to page through */
+.deck.is-solo .deck__nav,.deck.is-solo .deck__dots{display:none}

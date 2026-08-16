@@ -1321,18 +1321,39 @@ async function runMention(text) {
       { label: 'Repaint the road & props',           cls: 'ds-road',    line: 'Road repainted: sand and dust ✓' },
     ];
     openSubtasks('Artist Wana · reworking the world', STEPS_ART.map((x) => x.label));
+    // the Studio locks up for a one-Wana rework exactly as it does for a full build
+    showTab('studio');
+    setGenerating(true, {
+      label: 'Artist Wana is reworking the world — editing is locked',
+      cards: [{
+        key: 'artist', name: 'Artist Wana', stage: 'Rework · Desert dusk',
+        steps: STEPS_ART.map((x) => x.label),
+      }],
+    });
+    const soloCard = document.getElementById('mini-artist');
+    const soloDoing = document.getElementById('mini-artist-doing');
+    if (soloCard) soloCard.className = 'card is-working';
     for (let i = 0; i < STEPS_ART.length; i++) {
       setSubtask(i, 'running');
+      deckStep('artist', i, 'running');
+      if (soloDoing) soloDoing.textContent = STEPS_ART[i].label;
+      setProgress('artist', Math.round((i / STEPS_ART.length) * 100));
       setStatus(STEPS_ART[i].label + '…', false);
-      await wait(560);
+      await wait(1100);
       build.classList.add('is-' + STEPS_ART[i].cls);
       if (scene) scene.classList.add('is-desert');   // the editor changes with the game
-      await wait(700);
+      await wait(1300);
       setSubtask(i, 'done');
+      deckStep('artist', i, 'done');
       readLine(STEPS_ART[i].line);
     }
-    await wait(500);
+    setProgress('artist', 100);
+    if (soloCard) soloCard.className = 'card is-done';
+    if (soloDoing) soloDoing.textContent = 'Desert dusk is in';
+    await wait(900);
+    setGenerating(false);
     closeSubtasks();
+    showTab('preview');
     setStatus('Desert dusk — your call', false);
     setAgent(c.key, 'done', 'Desert dusk is in');
     agentSay(c, 'Swapped New York for a desert at dusk — sky, light, terrain and road all redone. The chase reads better against the open sand.');
@@ -1996,7 +2017,8 @@ function tasksView() {
 }
 
 // The Studio stays visible and keeps updating; it just stops taking edits.
-function setGenerating(on) {
+function setGenerating(on, opts) {
+  const o = opts || {};
   const ed = document.querySelector('.ed');
   const s = document.getElementById('studio');
   if (!ed || !s) return;
@@ -2010,12 +2032,12 @@ function setGenerating(on) {
     bar.id = 'ed-gen';
     bar.innerHTML = `
       <i class="breath"></i>
-      <span>Crew is building — editing is locked</span>
-      <b id="ed-gen-count">0 of 18</b>
-      <button id="ed-gen-go">View tasks →</button>`;
+      <span>${o.label || 'Crew is building — editing is locked'}</span>
+      ${o.cards ? '' : `<b id="ed-gen-count">0 of 18</b>
+      <button id="ed-gen-go">View tasks →</button>`}`;
     ed.querySelector('.ed__vp').appendChild(bar);
-    bar.querySelector('#ed-gen-go').onclick = () => showTab('tasks');
-    ed.querySelector('.ed__vp').appendChild(crewDeck());
+    bar.querySelector('#ed-gen-go')?.addEventListener('click', () => showTab('tasks'));
+    ed.querySelector('.ed__vp').appendChild(crewDeck(o.cards));
   }
   if (!on) {
     document.getElementById('ed-gen')?.remove();
@@ -2024,17 +2046,21 @@ function setGenerating(on) {
 }
 
 // One Wana at a time, on a veil over the scene — swipe or let it rotate.
-function crewDeck() {
-  const deck = el('div', 'deck');
+function crewDeck(cards) {
+  const list = cards || JOBS.map((j) => ({
+    key: j.key, name: j.name, steps: j.steps,
+    stage: (STAGES.find((st) => st.crew.includes(j.key)) || {}).name || 'Build',
+  }));
+  const deck = el('div', 'deck' + (list.length < 2 ? ' is-solo' : ''));
   deck.id = 'ed-crew';
   deck.innerHTML = `
     <button class="deck__nav deck__nav--prev" aria-label="Previous">‹</button>
     <div class="deck__win"><div class="deck__track" id="deck-track">
-      ${JOBS.map((j) => `
+      ${list.map((j) => `
         <article class="card" id="mini-${j.key}">
           <span class="card__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
           <b>${j.name}</b>
-          <span class="card__stage">${(STAGES.find((st) => st.crew.includes(j.key)) || {}).name || 'Build'}</span>
+          <span class="card__stage">${j.stage}</span>
           <ol class="card__steps">
             ${j.steps.map((t, k) => `<li id="tick-${j.key}-${k}"><i></i>${t}</li>`).join('')}
           </ol>
@@ -2045,7 +2071,7 @@ function crewDeck() {
     </div></div>
     <button class="deck__nav deck__nav--next" aria-label="Next">›</button>
     <div class="deck__dots" id="deck-dots">
-      ${JOBS.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}
+      ${list.map((_, i) => `<i class="${i ? '' : 'is-on'}"></i>`).join('')}
     </div>`;
   const track = deck.querySelector('#deck-track');
   let at = 0;
@@ -2287,15 +2313,19 @@ function mountTasks() {
 function setTask(key, i, state) {
   const t = document.getElementById(`task-${key}-${i}`);
   if (t) t.className = 'task is-' + state;
-  const tick = document.getElementById(`tick-${key}-${i}`);
-  if (tick) tick.className = 'is-' + state;
-  if (tick && state === 'running') tick.scrollIntoView({ block: 'nearest' });
+  deckStep(key, i, state);
   if (state === 'done') studioSpawn(key, i);
   const c = document.getElementById('ed-gen-count');
   paintOverall();
   paintStages();
   const txt = document.getElementById('overall-txt');
   if (c && txt) c.textContent = txt.textContent.replace(' done', '').split(' · ')[0];
+}
+function deckStep(key, i, state) {
+  const tick = document.getElementById(`tick-${key}-${i}`);
+  if (!tick) return;
+  tick.className = 'is-' + state;
+  if (state === 'running') tick.scrollIntoView({ block: 'nearest' });
 }
 // one line that answers "how far along is this build?"
 function paintOverall() {
