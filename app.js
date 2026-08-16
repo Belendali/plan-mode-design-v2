@@ -2019,32 +2019,45 @@ function setGenerating(on) {
 }
 
 // Objects land in the scene as the work lands.
+// Each finished task lands something in the scene you can actually see arrive.
 const SPAWN = {
-  developer: [['Road mesh', 'mesh'], ['Drive rig', 'group'], ['Coin ×24', 'mesh'], ['Escape trigger', 'group']],
-  artist: [['Night sky', 'light'], ['Block A · brownstone', 'mesh'], ['Wet asphalt', 'mesh'], ['Neon signage', 'light']],
-  audio: [['Engine source', 'group'], ['Pickup SFX', 'group'], ['Siren source', 'group'], ['Ambience bed', 'group']],
-  tester: [['Test route', 'group'], ['Balance probe', 'group'], ['Run recorder', 'group']],
-  marketing: [['Title card', 'group'], ['Cover shot', 'group'], ['Store copy', 'group']],
+  developer: [
+    ['Road mesh', 'mesh', 'road'], ['Player car', 'mesh', 'car'],
+    ['Coin ×24', 'mesh', 'coins'], ['Escape trigger', 'group', ''],
+  ],
+  artist: [
+    ['Night sky', 'light', 'sky'], ['City blocks ×6', 'mesh', 'blocks'],
+    ['Wet asphalt', 'mesh', 'asphalt'], ['Neon + street lamps', 'light', 'lights'],
+  ],
+  audio: [['Engine source', 'group', ''], ['Pickup SFX', 'group', ''],
+          ['Siren source', 'group', ''], ['Ambience bed', 'group', '']],
+  tester: [['Test route', 'group', 'lane'], ['Balance probe', 'group', ''], ['Run recorder', 'group', '']],
+  marketing: [['Title card', 'group', ''], ['Cover shot', 'group', ''], ['Store copy', 'group', '']],
 };
+const SCENE_STAGGER = { blocks: '.sc-block', lights: '.sc-lamp', coins: '.sc-coin' };
+function sceneApply(evt) {
+  const svg = document.getElementById('ed-scene');
+  if (!svg || !evt) return;
+  svg.classList.add('has-' + evt);
+  if (SCENE_STAGGER[evt]) {
+    svg.querySelectorAll(SCENE_STAGGER[evt]).forEach((n, k) =>
+      setTimeout(() => n.classList.add('is-in'), k * 190));
+  }
+  const light = document.getElementById('insp-light');
+  if (evt === 'lights' && light) light.textContent = 'night + lamps';
+}
 function studioSpawn(key, i) {
   const tree = document.querySelector('.ed__tree');
-  const vp = document.querySelector('.ed__grid .ed__spawned');
   const item = (SPAWN[key] || [])[i];
   if (!item || !tree) return;
   const b = el('button', 'node ' + item[1] + ' is-new', `<i></i>${item[0]}`);
   b.style.paddingLeft = '22px';
   tree.appendChild(b);
-  if (vp) {
-    const n = vp.children.length;
-    const x = 180 + (n % 5) * 150 + (n % 2) * 30;
-    const y = 380 + Math.floor(n / 5) * 96;
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.setAttribute('class', 'ed__box is-new');
-    g.innerHTML = `<path d="M${x} ${y} L${x + 74} ${y - 20} L${x + 74} ${y + 34} L${x} ${y + 58} Z"/>
-      <path d="M${x + 74} ${y - 20} L${x + 136} ${y} L${x + 136} ${y + 52} L${x + 74} ${y + 34} Z"/>
-      <path d="M${x} ${y} L${x + 74} ${y - 20} L${x + 136} ${y} L${x + 60} ${y + 20} Z"/>`;
-    vp.appendChild(g);
-  }
+  sceneApply(item[2]);
+  const n = tree.querySelectorAll('.node').length - 1;
+  const c1 = document.getElementById('ed-count'); if (c1) c1.textContent = n + ' objects';
+  const c2 = document.getElementById('insp-count'); if (c2) c2.textContent = n;
+  const nm = document.getElementById('insp-name'); if (nm) nm.textContent = item[0];
 }
 
 function mountStudio() {
@@ -2263,16 +2276,44 @@ const OUTLINER = [
 ];
 
 function studioView() {
-  const grid = Array.from({ length: 22 }, (_, i) =>
-    `<line x1="0" y1="${i * 40}" x2="1000" y2="${i * 40}"/>`).join('') +
-    Array.from({ length: 26 }, (_, i) => `<line x1="${i * 40}" y1="0" x2="${i * 40}" y2="880"/>`).join('');
+  const grid = Array.from({ length: 24 }, (_, i) =>
+    `<line x1="-200" y1="${i * 44}" x2="1200" y2="${i * 44}"/>`).join('') +
+    Array.from({ length: 30 }, (_, i) => `<line x1="${i * 40 - 100}" y1="0" x2="${i * 40 - 100}" y2="1000"/>`).join('');
+
+  // every block is authored up front and revealed as the crew makes it
+  const blocks = [
+    [110, 470, 150, 210], [300, 440, 120, 300], [470, 425, 130, 250],
+    [660, 435, 140, 285], [850, 455, 125, 225], [1010, 470, 150, 195],
+  ].map(([x, y, w, h], i) => `
+    <g class="sc-block" id="sc-block-${i}">
+      <path class="sc-face-l" d="M${x} ${y} L${x + w * .55} ${y - 26} L${x + w * .55} ${y - 26 + h} L${x} ${y + h} Z"/>
+      <path class="sc-face-r" d="M${x + w * .55} ${y - 26} L${x + w} ${y} L${x + w} ${y + h} L${x + w * .55} ${y - 26 + h} Z"/>
+      <path class="sc-face-t" d="M${x} ${y} L${x + w * .55} ${y - 26} L${x + w} ${y} L${x + w * .45} ${y + 24} Z"/>
+      <g class="sc-win">
+        ${Array.from({ length: 10 }, (_, k) => `<rect x="${x + 14 + (k % 2) * 34}" y="${y + 34 + Math.floor(k / 2) * 40}"
+          width="20" height="14" rx="2"/>`).join('')}
+      </g>
+    </g>`).join('');
+
+  const lamps = [230, 560, 900].map((x, i) => `
+    <g class="sc-lamp" id="sc-lamp-${i}" transform="translate(${x} 700)">
+      <rect x="-4" y="-150" width="8" height="150" rx="3"/>
+      <path d="M-4 -150 q0 -22 26 -22 h12 v10 h-12 q-16 0 -16 12 z"/>
+      <ellipse class="sc-bulb" cx="36" cy="-160" rx="10" ry="6"/>
+      <path class="sc-cone" d="M36 -156 L86 -10 L-14 -10 Z"/>
+    </g>`).join('');
+
+  const coins = [[420, 640], [560, 600], [700, 655], [840, 610]].map(([x, y], i) => `
+    <g class="sc-coin" id="sc-coin-${i}" transform="translate(${x} ${y})">
+      <ellipse rx="11" ry="14"/><ellipse class="sc-coin-hi" rx="4" ry="12"/></g>`).join('');
+
   return `
     <div class="ed">
       <aside class="ed__tree">
         <h3>Outliner</h3>
-        ${OUTLINER.map(([n, k, d]) => `
-          <button class="node ${k.split(' ')[0]}${k.includes('sel') ? ' is-sel' : ''}" style="padding-left:${8 + d * 14}px">
-            <i></i>${n}</button>`).join('')}
+        <div id="ed-tree-base">
+          <button class="node root"><i></i>Scene 1</button>
+        </div>
       </aside>
       <div class="ed__vp">
         <div class="ed__tools">
@@ -2281,37 +2322,65 @@ function studioView() {
           <span class="ed__sep"></span>
           <button title="Snap">⌗</button><button title="Local space">◲</button>
         </div>
-        <svg class="ed__grid" viewBox="0 0 1000 880" preserveAspectRatio="xMidYMid slice">
+        <svg class="ed__grid" id="ed-scene" viewBox="0 0 1100 900" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <linearGradient id="edFade" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0F0C11"/><stop offset="1" stop-color="#0F0C11" stop-opacity="0"/>
+            <linearGradient id="scSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0B0A18"/><stop offset=".62" stop-color="#2A1A46"/>
+              <stop offset="1" stop-color="#7E3057"/>
             </linearGradient>
+            <linearGradient id="scRoad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2A2140"/><stop offset="1" stop-color="#0D0B16"/>
+            </linearGradient>
+            <linearGradient id="scFade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0B0A10"/><stop offset="1" stop-color="#0B0A10" stop-opacity="0"/>
+            </linearGradient>
+            <radialGradient id="scLamp"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".5"/>
+              <stop offset="1" stop-color="#FFE9A8" stop-opacity="0"/></radialGradient>
           </defs>
-          <g class="ed__lines" transform="matrix(1,0,0,.42,0,300)">${grid}</g>
-          <rect width="1000" height="360" fill="url(#edFade)"/>
-          <g class="ed__box"><path d="M300 470 L420 440 L420 520 L300 556 Z"/><path d="M420 440 L520 470 L520 548 L420 520 Z"/><path d="M300 470 L420 440 L520 470 L400 500 Z"/></g>
-          <g class="ed__box"><path d="M620 430 L720 404 L720 476 L620 506 Z"/><path d="M720 404 L806 430 L806 500 L720 476 Z"/><path d="M620 430 L720 404 L806 430 L708 456 Z"/></g>
-          <g class="ed__sel">
-            <path d="M430 600 L560 570 L560 640 L430 674 Z"/><path d="M560 570 L672 600 L672 668 L560 640 Z"/>
-            <path d="M430 600 L560 570 L672 600 L546 632 Z"/>
+
+          <rect class="sc-sky" width="1100" height="900" fill="url(#scSky)"/>
+          <g class="sc-grid">${grid}</g>
+          <rect width="1100" height="330" fill="url(#scFade)"/>
+
+          <path class="sc-road" d="M430 470 L670 470 L1180 900 L-80 900 Z" fill="url(#scRoad)"/>
+          <g class="sc-lane">
+            ${[0.06, 0.2, 0.38, 0.6, 0.86].map((p) => {
+              const y = 470 + 430 * p, w = 8 + 26 * p, h = 18 + 66 * p;
+              return `<rect x="${550 - w / 2}" y="${y}" width="${w}" height="${h}" rx="${w / 3}"/>`;
+            }).join('')}
           </g>
+
+          ${blocks}
+          ${lamps}
+          ${coins}
+
+          <g class="sc-car" id="sc-car" transform="translate(550 760)">
+            <ellipse cx="0" cy="60" rx="98" ry="14" fill="#000" opacity=".45"/>
+            <rect x="-86" y="-18" width="172" height="76" rx="17" fill="#15141C"/>
+            <rect x="-62" y="-54" width="124" height="44" rx="12" fill="#1D1C27"/>
+            <rect x="-52" y="-46" width="104" height="28" rx="8" fill="#3A3952" opacity=".78"/>
+            <rect class="sc-tail" x="-76" y="4" width="52" height="12" rx="6"/>
+            <rect class="sc-tail" x="24" y="4" width="52" height="12" rx="6"/>
+            <rect x="-22" y="32" width="44" height="15" rx="4" fill="#F2C94C"/>
+          </g>
+
           <g class="ed__spawned"></g>
-          <g class="ed__giz" transform="translate(546 616)">
-            <line x1="0" y1="0" x2="132" y2="34" class="gx"/><polygon points="132,26 154,34 132,42" class="gx-f"/>
-            <line x1="0" y1="0" x2="0" y2="-118" class="gy"/><polygon points="-8,-118 0,-140 8,-118" class="gy-f"/>
-            <line x1="0" y1="0" x2="-124" y2="32" class="gz"/><polygon points="-124,24 -146,32 -124,40" class="gz-f"/>
+          <g class="ed__giz" id="ed-giz" transform="translate(550 740)">
+            <line x1="0" y1="0" x2="120" y2="30" class="gx"/><polygon points="120,22 142,30 120,38" class="gx-f"/>
+            <line x1="0" y1="0" x2="0" y2="-108" class="gy"/><polygon points="-8,-108 0,-130 8,-108" class="gy-f"/>
+            <line x1="0" y1="0" x2="-114" y2="28" class="gz"/><polygon points="-114,20 -136,28 -114,36" class="gz-f"/>
             <circle r="6" class="gc"/>
           </g>
         </svg>
         <div class="ed__inspector">
-          <h3>Player car</h3>
-          <div class="prop"><span>Position</span><b>0.00</b><b>0.35</b><b>-4.20</b></div>
-          <div class="prop"><span>Rotation</span><b>0.00</b><b>180.0</b><b>0.00</b></div>
+          <h3 id="insp-name">Scene 1</h3>
+          <div class="prop"><span>Position</span><b>0.00</b><b>0.00</b><b>0.00</b></div>
+          <div class="prop"><span>Rotation</span><b>0.00</b><b>0.00</b><b>0.00</b></div>
           <div class="prop"><span>Scale</span><b>1.00</b><b>1.00</b><b>1.00</b></div>
-          <div class="prop prop--pick"><span>Material</span><em>Car paint · black</em></div>
-          <div class="prop prop--pick"><span>Collider</span><em>Box · kinematic</em></div>
+          <div class="prop prop--pick"><span>Objects</span><em id="insp-count">0</em></div>
+          <div class="prop prop--pick"><span>Lighting</span><em id="insp-light">none</em></div>
         </div>
-        <div class="ed__hud"><span>Perspective</span><span>·</span><span>24 objects</span><span>·</span><span>60 fps</span></div>
+        <div class="ed__hud"><span>Perspective</span><span>·</span><span id="ed-count">0 objects</span><span>·</span><span>60 fps</span></div>
       </div>
     </div>`;
 }

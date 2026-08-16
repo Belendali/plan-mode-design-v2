@@ -1348,9 +1348,6 @@ body{
 
 .ed__vp{position:relative;flex:1;min-width:0;overflow:hidden;background:#0B0A10}
 .ed__grid{position:absolute;inset:0;width:100%;height:100%}
-.ed__lines line{stroke:rgba(255,255,255,.075);stroke-width:1}
-.ed__box path{fill:rgba(255,255,255,.06);stroke:rgba(255,255,255,.24);stroke-width:1.2}
-.ed__sel path{fill:rgba(192,240,0,.1);stroke:var(--lime);stroke-width:1.6}
 .ed__giz line{stroke-width:2.4}
 .ed__giz .gx{stroke:#FF5A5A}.ed__giz .gy{stroke:#8CE99A}.ed__giz .gz{stroke:#6EA8FF}
 .ed__giz .gx-f{fill:#FF5A5A}.ed__giz .gy-f{fill:#8CE99A}.ed__giz .gz-f{fill:#6EA8FF}
@@ -1680,3 +1677,57 @@ body{
 @keyframes vpBreathe{0%,100%{opacity:.5}50%{opacity:1}}
 .ed.is-locked .ed__grid{animation:scanShift 6s ease-in-out infinite}
 @keyframes scanShift{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+
+/* ══ Studio scene — assembled piece by piece ═══════════════════════ */
+#ed-scene .sc-grid line{stroke:rgba(255,255,255,.07);stroke-width:1}
+#ed-scene .sc-grid{transform:matrix(1,0,0,.4,0,468);transform-origin:0 0}
+
+/* everything starts absent */
+#ed-scene .sc-sky{opacity:0;transition:opacity 1.6s ease}
+#ed-scene .sc-road,#ed-scene .sc-lane{opacity:0;transition:opacity .9s ease}
+#ed-scene .sc-block,#ed-scene .sc-lamp,#ed-scene .sc-coin,#ed-scene .sc-car{opacity:0}
+
+/* …and arrives as the crew makes it */
+#ed-scene.has-sky .sc-sky{opacity:1}
+#ed-scene.has-road .sc-road{opacity:1}
+#ed-scene.has-lane .sc-lane{opacity:1}
+#ed-scene.has-road .sc-grid line{stroke:rgba(255,255,255,.05)}
+
+#ed-scene .sc-road{fill:url(#scRoad)}
+#ed-scene.has-asphalt .sc-road{filter:drop-shadow(0 0 26px rgba(255,123,176,.25))}
+#ed-scene .sc-lane rect{fill:#F4F2E8;opacity:.85}
+
+#ed-scene .sc-block .sc-face-l{fill:#2A2340}
+#ed-scene .sc-block .sc-face-r{fill:#1B1631}
+#ed-scene .sc-block .sc-face-t{fill:#3A3158}
+#ed-scene .sc-block .sc-win rect{fill:#FFD98A;opacity:0;transition:opacity .5s}
+#ed-scene.has-lights .sc-block .sc-win rect{opacity:.8}
+#ed-scene.has-lights .sc-block .sc-win rect:nth-child(3n){fill:#7FE9FF}
+#ed-scene .sc-block.is-in{animation:blockRise .8s cubic-bezier(.2,.85,.3,1.05) both}
+@keyframes blockRise{
+  0%{opacity:0;transform:translateY(90px) scaleY(.4);filter:drop-shadow(0 0 26px rgba(192,240,0,.9))}
+  70%{filter:drop-shadow(0 0 16px rgba(192,240,0,.5))}
+  100%{opacity:1;transform:none;filter:drop-shadow(0 0 0 rgba(192,240,0,0))}
+}
+#ed-scene .sc-block{transform-origin:center bottom}
+
+#ed-scene .sc-lamp rect,#ed-scene .sc-lamp path{fill:#2A2440}
+#ed-scene .sc-lamp .sc-bulb{fill:#FFE9A8}
+#ed-scene .sc-lamp .sc-cone{fill:url(#scLamp)}
+#ed-scene .sc-lamp.is-in{animation:lampOn .7s ease both}
+@keyframes lampOn{0%{opacity:0}60%{opacity:1;filter:drop-shadow(0 0 22px rgba(255,233,168,.9))}
+  100%{opacity:1;filter:none}}
+
+#ed-scene .sc-coin ellipse{fill:#FFC83D}
+#ed-scene .sc-coin .sc-coin-hi{fill:#FFE9A8}
+#ed-scene .sc-coin.is-in{animation:coinIn .6s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes coinIn{0%{opacity:0;transform:scale(.2)}100%{opacity:1;transform:none}}
+
+#ed-scene .sc-car .sc-tail{fill:#FF2E4D}
+#ed-scene.has-car .sc-car{animation:carDrop .9s cubic-bezier(.2,.85,.3,1.05) both}
+@keyframes carDrop{
+  0%{opacity:0;transform:translate(550px,700px) scale(.7);filter:drop-shadow(0 0 30px rgba(192,240,0,.9))}
+  100%{opacity:1;transform:translate(550px,760px) scale(1);filter:none}
+}
+#ed-scene .ed__giz{opacity:0;transition:opacity .5s}
+#ed-scene.has-car .ed__giz{opacity:1}
