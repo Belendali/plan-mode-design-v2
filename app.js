@@ -1777,6 +1777,7 @@ async function screenBuildParallel() {
   await Promise.all(JOBS.map((j) => runJob(j, build)));
 
   build.classList.add('is-test');
+  markBuilt();
   document.querySelector('.tab[data-tab="crew"]').classList.remove('has-work');
   const sub = document.getElementById('crew-sub');
   if (sub) sub.textContent = 'All five finished. The build is in Preview.';
@@ -1842,6 +1843,30 @@ const CODE_LINES = [
   ['kw', 'export function'], ['fn', ' createPursuit'], ['pn', '(cops'], ['op', ': '], ['ty', 'Cop[]'], ['pn', ', player'], ['op', ': '], ['ty', 'Car'], ['pn', ') {'],
 ];
 
+const EMPTY = {
+  preview: ['▷', 'Nothing to play yet',
+    'Tell Wana what you want to make. When the crew finishes a build, it lands here and you can drive it.'],
+  assets: ['▦', 'No assets yet',
+    'Every model, material and sound the crew makes for your game will show up here.'],
+  code: ['‹›', 'No code yet',
+    'Developer Wana writes the game logic. Once there is a build, the files open here.'],
+  studio: ['◍', 'Empty scene',
+    'This is your scene. The crew fills it in — and you can move anything they place.'],
+};
+function emptyState(key) {
+  const [icon, title, body] = EMPTY[key];
+  return `<div class="empty"><span class="empty__i">${icon}</span>
+    <h3>${title}</h3><p>${body}</p></div>`;
+}
+// Flips every view from "nothing here" to the finished build.
+function markBuilt() {
+  const s = document.getElementById('studio');
+  if (!s) return;
+  s.classList.add('is-built');
+  mountPreviewGame();
+  wirePreview();
+}
+
 function mountStudio() {
   let s = document.getElementById('studio');
   if (s) return s;
@@ -1863,17 +1888,19 @@ function mountStudio() {
       </div>
     </header>
     <div class="views" id="views">
-      <section class="view view--preview" data-view="preview">${previewView()}</section>
-      <section class="view view--studio" data-view="studio">${studioView()}</section>
-      <section class="view view--assets" data-view="assets">${assetsView()}</section>
-      <section class="view view--code" data-view="code">${codeView()}</section>
+      <section class="view view--preview" data-view="preview">
+        ${emptyState('preview')}<div class="built">${previewView()}</div></section>
+      <section class="view view--studio" data-view="studio">
+        ${emptyState('studio')}<div class="built">${studioView()}</div></section>
+      <section class="view view--assets" data-view="assets">
+        ${emptyState('assets')}<div class="built">${assetsView()}</div></section>
+      <section class="view view--code" data-view="code">
+        ${emptyState('code')}<div class="built">${codeView()}</div></section>
       <section class="view view--crew" data-view="crew">${crewView()}</section>
     </div>
   `;
   document.getElementById('stage').insertBefore(s, document.querySelector('.panel'));
   s.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
-  mountPreviewGame();
-  wirePreview();
   mountTasks();
   mountCrewStage(JOBS.map((j) => j.key)).classList.add('is-lit', 'is-working');
   JOBS.forEach((j) => { setMember(j.key, 'idle', 'waiting'); setProgress(j.key, 0); });
@@ -2246,6 +2273,7 @@ if (QUERY.includes('studio')) {
   mountStudio();
   const t = (QUERY.match(/tab=(\w+)/) || [])[1];
   if (t) {
+    markBuilt();
     // a snapshot mid-build, so every state is visible at once
     setMember('developer', 'done', 'Core loop wired');   setProgress('developer', 100);
     setMember('artist', 'working', 'Neon pass');          setProgress('artist', 72);

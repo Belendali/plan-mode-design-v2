@@ -1483,3 +1483,19 @@ body{
 .office .crewfloor{position:absolute;inset:0;padding-bottom:8%}
 .pane--crew{overflow:hidden}
 .pane--crew .crewwrap{height:100%}
+
+/* ── Empty states — before the crew has made anything ────────────── */
+.empty{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;text-align:center;padding:40px;
+}
+.empty__i{
+  width:64px;height:64px;border-radius:18px;display:grid;place-items:center;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  font-size:24px;color:rgba(255,255,255,.35);margin-bottom:4px;
+}
+.empty h3{margin:0;font-size:17px;font-weight:600;color:rgba(255,255,255,.8)}
+.empty p{margin:0;max-width:44ch;font-size:13.5px;line-height:1.65;color:rgba(255,255,255,.42)}
+.built{position:absolute;inset:0;opacity:0;pointer-events:none}
+.studio2.is-built .empty{display:none}
+.studio2.is-built .built{opacity:1;pointer-events:auto;animation:loginIn .5s ease}
