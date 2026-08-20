@@ -1917,3 +1917,7 @@ body{
 .keyart__cue i{filter:drop-shadow(0 2px 8px rgba(0,0,0,.9))}
 .doc__bar{background:linear-gradient(180deg,rgba(22,20,15,0),rgba(22,20,15,.9) 30%,#16140f 70%);
   padding-top:26px}
+
+/* the welcome has no target to point at, so Wanaka stands dead centre */
+.tour.is-centre .tour__wana{left:835px;bottom:517px}
+.tour.is-centre .tour__bubble{left:745px;bottom:312px}
