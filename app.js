@@ -175,6 +175,8 @@ function convoBox(id) {
   if (!box) {
     box = el('div', 'convo');
     box.id = 'convo-' + id;
+    // the one that is current must be visible from the moment it exists
+    box.classList.toggle('is-on', id === CONVO);
     log.appendChild(box);
   }
   return box;
