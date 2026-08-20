@@ -100,7 +100,7 @@ stage.innerHTML = `
     <div class="panel__glow"><img src="assets/bg-ellipses.svg" alt=""></div>
 
     <div class="chatinfo chatinfo--top">
-      <div class="chatinfo__name"><span>NYC Getaway Drive</span><img src="assets/chevron.svg" alt=""></div>
+      <div class="chatinfo__name" id="convo-switch"><span>NYC Getaway Drive</span><img src="assets/chevron.svg" alt=""></div>
       <div class="chatinfo__rule"></div>
       <div class="chatinfo__stats">
         <div class="coins"><img src="assets/coin.png" alt=""><b>320</b></div>
@@ -163,13 +163,65 @@ const setPerch = (who) => {
 };
 
 const scrollDown = () => { log.scrollTop = log.scrollHeight; };
-const push = (node) => { log.appendChild(node); scrollDown(); return node; };
+// ── Conversations ─────────────────────────────────────────────────
+// The panel holds more than one chat. The game has its own; asking a Wana to
+// rework an asset opens a separate one named after the job.
+const CONVOS = [{ id: 'main', title: 'NYC Getaway Drive' }];
+let CONVO = 'main';
+let CONVO_SEQ = 0;
+
+function convoBox(id) {
+  let box = document.getElementById('convo-' + id);
+  if (!box) {
+    box = el('div', 'convo');
+    box.id = 'convo-' + id;
+    log.appendChild(box);
+  }
+  return box;
+}
+function activeBox() { return convoBox(CONVO); }
+function clearLog() { activeBox().innerHTML = ''; }
+
+function switchConvo(id) {
+  CONVO = id;
+  const c = CONVOS.find((x) => x.id === id) || CONVOS[0];
+  log.querySelectorAll('.convo').forEach((b) => b.classList.toggle('is-on', b.id === 'convo-' + id));
+  convoBox(id).classList.add('is-on');
+  const label = document.querySelector('.chatinfo__name span');
+  if (label) label.textContent = c.title;
+  input.placeholder = c.asset ? `Tell ${c.by} Wana about ${c.asset}…` : 'Ask, plan, build anything...';
+  setSend('disabled');
+  closeConvoMenu();
+  scrollDown();
+}
+
+function closeConvoMenu() { document.getElementById('convo-menu')?.remove(); }
+
+function toggleConvoMenu() {
+  if (document.getElementById('convo-menu')) return closeConvoMenu();
+  const m = el('div', 'convomenu');
+  m.id = 'convo-menu';
+  m.innerHTML = CONVOS.map((c) => `
+    <button data-id="${c.id}" class="${c.id === CONVO ? 'is-on' : ''}">
+      ${c.asset ? `<i style="background-image:url('assets/thumb-${c.th}.jpg')"></i>` : '<i class="convomenu__dot"></i>'}
+      <span>${c.title}</span>
+    </button>`).join('');
+  document.querySelector('.chatinfo--top').appendChild(m);
+  m.querySelectorAll('button').forEach((b) => { b.onclick = () => switchConvo(b.dataset.id); });
+}
+
+const push = (node) => { activeBox().appendChild(node); scrollDown(); return node; };
+
+document.getElementById('convo-switch').onclick = (e) => { e.stopPropagation(); toggleConvoMenu(); };
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#convo-menu') && !e.target.closest('#convo-switch')) closeConvoMenu();
+});
 
 // ── Screens ───────────────────────────────────────────────────────
 let busy = false;
 
 function screenStart() {
-  log.innerHTML = '';
+  clearLog();
   perch.style.opacity = '0';
   switchEl.classList.remove('is-on');
   input.value = '';
@@ -206,7 +258,7 @@ async function runConversation(seed) {
   if (busy) return;
   busy = true;
   clearStart();
-  log.innerHTML = '';
+  clearLog();
 
   push(el('div', 'msg msg--user', seed));
   setPerch('think');
@@ -767,7 +819,7 @@ async function screenBuild() {
   busy = true;
   setSend('busy');
   clearStart();
-  log.innerHTML = '';
+  clearLog();
   perch.style.opacity = '0';
   switchEl.classList.add('is-on');
   awaitingReview = null;
@@ -873,7 +925,7 @@ function tryDemo() {
 // Jump straight to the finished build (director shortcut, no review gates).
 function buildDone() {
   clearStart();
-  log.innerHTML = '';
+  clearLog();
   perch.style.opacity = '0';
   switchEl.classList.add('is-on');
   awaitingReview = null;
@@ -904,7 +956,8 @@ document.getElementById('send').onclick = () => {
   if (!v) return;
   input.value = '';
   setSend('disabled');
-  if (THREAD) { threadEdit(THREAD.name, THREAD.by, THREAD.baseTh, v); return; }
+  const c = CONVOS.find((x) => x.id === CONVO);
+  if (c && c.asset) { threadEdit(c.asset, c.by, c.baseTh, v); return; }
   if (parseMention(v)) { runMention(v); return; }
   if (awaitingReview) {
     if (GO_WORDS.test(v)) awaitingReview.go(v);
@@ -927,9 +980,9 @@ document.getElementById('plannerbtn').onclick = () => {
 // ── Step map — no on-screen control, only #step1…#step7 deep links ─
 const STEPS = [
   ['01 Start', () => { busy = false; screenStart(); }],
-  ['02 Question', () => { busy = false; clearStart(); log.innerHTML = ''; runConversation(SEED); }],
+  ['02 Question', () => { busy = false; clearStart(); clearLog(); runConversation(SEED); }],
   ['03 Pitch', () => {
-    busy = false; clearStart(); log.innerHTML = '';
+    busy = false; clearStart(); clearLog();
     switchEl.classList.remove('is-on');
     setPerch('think');
     push(el('div', 'msg msg--user', SEED));
@@ -941,9 +994,9 @@ const STEPS = [
     });
     screenPitch();
   }],
-  ['04 Planning', () => { busy = false; clearStart(); log.innerHTML = ''; screenPlanning(null); }],
+  ['04 Planning', () => { busy = false; clearStart(); clearLog(); screenPlanning(null); }],
   ['05 Plan ready', () => {
-    busy = false; clearStart(); log.innerHTML = '';
+    busy = false; clearStart(); clearLog();
     switchEl.classList.add('is-on');
     setPerch('plan');
     push(el('div', 'joined', 'Crew assembled'));
@@ -1569,7 +1622,7 @@ function screenLogin(ask) {
 function startOnboarding(ask) {
   mountStudio();
   clearStart();
-  log.innerHTML = '';
+  clearLog();
   perch.style.opacity = '0';
   push(el('div', 'msg msg--user', ask));
   setSend('disabled');
@@ -1812,7 +1865,7 @@ async function screenBuildParallel() {
   busy = true;
   setSend('busy');
   clearStart();
-  log.innerHTML = '';
+  clearLog();
   perch.style.opacity = '0';
   switchEl.classList.add('is-on');
   input.placeholder = 'Click Stop to cancel…';
@@ -1962,8 +2015,6 @@ const LIBRARY = [
 
 // name → { th, filter, ver } once the crew has reworked it
 const ASSET_STATE = {};
-// the asset the chat is scoped to, if any
-let THREAD = null;
 // variants you chose to keep alongside the original
 const ASSET_KEPT = [];
 
@@ -2518,36 +2569,34 @@ function libCard(l) {
 }
 
 // ── A thread about one asset, in the chat ─────────────────────────
+const CONVO_TITLE = {
+  Vehicle: '3D Car Model Adjust', Environment: '3D Block Model Adjust',
+  Prop: '3D Prop Adjust', Material: 'Material Adjust',
+  UI: 'UI Adjust', Audio: 'Audio Adjust',
+};
+
 function openAssetThread(name, by, baseTh) {
   const live = ASSET_STATE[name] || {};
   const th = live.th || baseTh;
   const agent = { name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` };
-  THREAD = { name, by, baseTh };
-  clearStart();
-  if (typeof perch !== 'undefined' && perch) perch.style.opacity = '0';
 
-  document.getElementById('scope')?.remove();
-  const scope = el('div', 'scope');
-  scope.id = 'scope';
-  scope.innerHTML = `
-    <i style="background-image:url('assets/thumb-${th}.jpg')"></i>
-    <span>Editing <b>${name}</b></span>
-    <button aria-label="Leave this thread">✕</button>`;
-  const wrap = document.querySelector('.composer-wrap');
-  wrap.insertBefore(scope, wrap.querySelector('.composer'));
-  scope.querySelector('button').onclick = () => {
-    scope.remove();
-    THREAD = null;
-    input.placeholder = 'Tell Wana what to change…';
-  };
+  // one asset already has a chat? go back to it rather than starting another
+  const had = CONVOS.find((c) => c.asset === name);
+  if (had) { switchConvo(had.id); return; }
 
-  push(el('div', 'joined', `New thread · ${name}`));
+  const id = 'c' + (++CONVO_SEQ);
+  CONVOS.push({
+    id, title: CONVO_TITLE[ASSET_TAG[name]] || `${name} Adjust`,
+    asset: name, by, baseTh, th,
+  });
+  switchConvo(id);
+  if (perch) perch.style.opacity = '0';
+
   const cover = push(el('div', 'cover'));
   cover.innerHTML = `
     <div class="cover__shot" style="background-image:url('assets/thumb-${th}.jpg')"></div>
     <span class="cover__name">${name}<b>v${live.ver || 1}</b></span>`;
   agentSay(agent, 'What would you like it to look like?');
-  input.placeholder = `Tell ${by} Wana about ${name}…`;
   scrollDown();
 }
 
@@ -3070,7 +3119,7 @@ if (QUERY.includes('doc')) {
 const plate = (QUERY.match(/plate=([abc])/) || [])[1];
 if (plate) {
   clearStart();
-  log.innerHTML = '';
+  clearLog();
   const b = mountBuild();
   b.classList.add('is-clean', 'is-frozen');
   if (plate !== 'a') b.classList.add('is-art');

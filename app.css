@@ -2126,3 +2126,29 @@ html[style*="--car-paint"] .car-roof{fill:var(--car-roof)}
   font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;font-weight:600;
   padding:2px 7px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);
 }
+
+/* ── More than one chat in the panel ──────────────────────────────── */
+.convo{display:none}
+.convo.is-on{display:block}
+.chatinfo__name{cursor:pointer;border-radius:10px;padding:2px 6px;margin-left:-6px;
+  transition:background .16s ease}
+.chatinfo__name:hover{background:rgba(255,255,255,.07)}
+.chatinfo--top{position:relative}
+.convomenu{
+  position:absolute;left:0;top:calc(100% + 6px);z-index:30;min-width:264px;padding:6px;
+  border-radius:14px;background:#1A171E;border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 24px 60px rgba(0,0,0,.6);
+  animation:loginIn .16s ease;
+}
+.convomenu button{
+  display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:10px;
+  background:none;cursor:pointer;text-align:left;color:rgba(255,255,255,.8);
+  font-family:var(--font);font-size:13.5px;
+}
+.convomenu button:hover{background:rgba(255,255,255,.08);color:#fff}
+.convomenu button.is-on{background:rgba(192,240,0,.12);color:#fff}
+.convomenu i{width:34px;height:23px;border-radius:6px;flex:none;display:block;
+  background-size:cover;background-position:center;background-color:rgba(255,255,255,.08)}
+.convomenu__dot{position:relative}
+.convomenu__dot::after{content:'';position:absolute;left:50%;top:50%;width:7px;height:7px;
+  margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--lime)}
