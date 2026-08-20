@@ -620,8 +620,8 @@ function citySVG() {
       <ellipse cx="0" cy="92" rx="128" ry="18" fill="#000" opacity=".5"/>
       <ellipse cx="-92" cy="24" rx="74" ry="48" fill="url(#gdTail)" opacity=".6"/>
       <ellipse cx="92" cy="24" rx="74" ry="48" fill="url(#gdTail)" opacity=".6"/>
-      <rect x="-118" y="-24" width="236" height="104" rx="22" fill="#15141C"/>
-      <rect x="-86" y="-74" width="172" height="60" rx="16" fill="#1D1C27"/>
+      <rect class="car-body" x="-118" y="-24" width="236" height="104" rx="22" fill="#15141C"/>
+      <rect class="car-roof" x="-86" y="-74" width="172" height="60" rx="16" fill="#1D1C27"/>
       <rect x="-72" y="-64" width="144" height="38" rx="10" fill="#3A3952" opacity=".75"/>
       <rect x="-118" y="4" width="236" height="16" rx="8" fill="#0E0D14" opacity=".7"/>
       <rect x="-104" y="8" width="72" height="16" rx="8" fill="#FF2E4D"/>
@@ -1268,8 +1268,8 @@ function desertRoad() {
       <ellipse cx="0" cy="92" rx="128" ry="18" fill="#000" opacity=".4"/>
       <ellipse cx="-92" cy="24" rx="70" ry="46" fill="url(#dsTail)" opacity=".5"/>
       <ellipse cx="92" cy="24" rx="70" ry="46" fill="url(#dsTail)" opacity=".5"/>
-      <rect x="-118" y="-24" width="236" height="104" rx="22" fill="#1D1712"/>
-      <rect x="-86" y="-74" width="172" height="60" rx="16" fill="#2A211A"/>
+      <rect class="car-body" x="-118" y="-24" width="236" height="104" rx="22" fill="#1D1712"/>
+      <rect class="car-roof" x="-86" y="-74" width="172" height="60" rx="16" fill="#2A211A"/>
       <rect x="-72" y="-64" width="144" height="38" rx="10" fill="#5A4433" opacity=".8"/>
       <rect x="-104" y="8" width="72" height="16" rx="8" fill="#FF2E4D"/>
       <rect x="32" y="8" width="72" height="16" rx="8" fill="#FF2E4D"/>
@@ -1908,13 +1908,24 @@ const ASSET_VARIANTS = {
   'HUD · speed': {
     regen: 'ui-a-v2',
     note: 'Segmented gauge, live readout',
+    chips: ['Make it amber', 'Segmented gauge, bigger numbers', 'Ice blue'],
     tint: { amber: 'ui-a-amber', orange: 'ui-a-amber', warm: 'ui-a-amber',
             cyan: 'ui-a-cyan', blue: 'ui-a-cyan', ice: 'ui-a-cyan',
             pink: 'ui-a-magenta', magenta: 'ui-a-magenta', purple: 'ui-a-magenta' },
   },
+  'Player car': {
+    regen: 'car-v2',
+    note: 'Wider body, crimson paint',
+    chips: ['Crimson paint', 'Ice blue', 'Magenta, like the signage'],
+    tint: { red: 'car-v2', crimson: 'car-v2',
+            amber: 'car-amber', orange: 'car-amber', gold: 'car-amber',
+            cyan: 'car-cyan', blue: 'car-cyan', ice: 'car-cyan',
+            pink: 'car-magenta', magenta: 'car-magenta', purple: 'car-magenta' },
+  },
   'HUD · timer': {
     regen: 'ui-b-v2',
     note: 'Countdown ring, time-left bar',
+    chips: ['Make it cyan', 'Countdown ring', 'Amber, easier to read'],
     tint: { amber: 'ui-b-amber', orange: 'ui-b-amber', warm: 'ui-b-amber',
             cyan: 'ui-b-cyan', blue: 'ui-b-cyan', ice: 'ui-b-cyan',
             pink: 'ui-b-magenta', magenta: 'ui-b-magenta', purple: 'ui-b-magenta' },
@@ -2343,7 +2354,7 @@ function openAsset(name, baseTh) {
     foot.innerHTML = `
       <div class="ax__ask">
         <div class="ax__chips">
-          ${['Make it amber', 'Segmented gauge, bigger numbers', 'Match the neon signage']
+          ${(spec.chips || ['Make it amber', 'Warmer light', 'Match the neon signage'])
             .map((c) => `<button class="ax__chip">${c}</button>`).join('')}
         </div>
         <div class="ax__row">
@@ -2424,10 +2435,23 @@ function openAsset(name, baseTh) {
 // An asset is not a picture in a drawer — swapping it shows up in the game.
 const ASSET_ACCENT = { amber: '#FFA82C', cyan: '#40D6FF', magenta: '#FF56C4', v2: '#C0F000' };
 const HUD_SLOT = { 'HUD · speed': '.hud2__r', 'HUD · timer': '.hud2__l' };
+// the car in the editor and the car in the game are the same car
+const CAR_PAINT = {
+  'car-v2':      ['#8E1730', '#C2213B'],
+  'car-amber':   ['#8A4A0C', '#C87B18'],
+  'car-cyan':    ['#12405F', '#2076A8'],
+  'car-magenta': ['#5E1354', '#A82690'],
+};
 function applyAsset(name, next) {
   if (next) ASSET_STATE[name] = next;
   else delete ASSET_STATE[name];
   repaintAssets();
+  if (name === 'Player car') {
+    const paint = next && CAR_PAINT[next.th];
+    const root = document.documentElement.style;
+    if (paint) { root.setProperty('--car-paint', paint[0]); root.setProperty('--car-roof', paint[1]); }
+    else { root.removeProperty('--car-paint'); root.removeProperty('--car-roof'); }
+  }
   const slot = HUD_SLOT[name];
   if (slot) {
     const r = document.querySelector('.view--preview ' + slot);
@@ -2708,8 +2732,8 @@ function studioView() {
 
           <g class="sc-car" id="sc-car" transform="translate(550 760)">
             <ellipse cx="0" cy="60" rx="98" ry="14" fill="#000" opacity=".45"/>
-            <rect x="-86" y="-18" width="172" height="76" rx="17" fill="#15141C"/>
-            <rect x="-62" y="-54" width="124" height="44" rx="12" fill="#1D1C27"/>
+            <rect class="car-body" x="-86" y="-18" width="172" height="76" rx="17" fill="#15141C"/>
+            <rect class="car-roof" x="-62" y="-54" width="124" height="44" rx="12" fill="#1D1C27"/>
             <rect x="-52" y="-46" width="104" height="28" rx="8" fill="#3A3952" opacity=".78"/>
             <rect class="sc-tail" x="-76" y="4" width="52" height="12" rx="6"/>
             <rect class="sc-tail" x="24" y="4" width="52" height="12" rx="6"/>
@@ -2833,8 +2857,8 @@ function previewGameSVG() {
         <ellipse cx="0" cy="86" rx="150" ry="20" fill="#000" opacity=".5"/>
         <ellipse cx="-104" cy="26" rx="80" ry="50" fill="url(#pvTail)" opacity=".65"/>
         <ellipse cx="104" cy="26" rx="80" ry="50" fill="url(#pvTail)" opacity=".65"/>
-        <rect x="-132" y="-26" width="264" height="112" rx="24" fill="#15141C"/>
-        <rect x="-96" y="-80" width="192" height="64" rx="17" fill="#1D1C27"/>
+        <rect class="car-body" x="-132" y="-26" width="264" height="112" rx="24" fill="#15141C"/>
+        <rect class="car-roof" x="-96" y="-80" width="192" height="64" rx="17" fill="#1D1C27"/>
         <rect x="-80" y="-69" width="160" height="41" rx="11" fill="#3A3952" opacity=".78"/>
         <rect x="-132" y="4" width="264" height="17" rx="8" fill="#0E0D14" opacity=".7"/>
         <rect x="-116" y="8" width="80" height="17" rx="8" fill="#FF2E4D"/>

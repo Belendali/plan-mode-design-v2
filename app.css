@@ -2028,3 +2028,13 @@ body{
 /* the speed readout in the running game wears whatever HUD asset is in the build */
 .hud2__r b,.hud2__r .hud2__k,.hud2__l b,.hud2__l .hud2__k{color:var(--hud-accent,#fff);transition:color .5s ease}
 .hud2__r.is-swapped,.hud2__l.is-swapped{animation:assetSwap 1.5s ease;border-radius:10px}
+
+/* A hidden view must be inert: its .built sets pointer-events:auto, which
+   re-enables hit-testing even under a pointer-events:none parent. */
+.view:not(.is-on){visibility:hidden}
+
+/* one paint job, worn by the car in the editor and the car in the game */
+.car-body{transition:fill .6s ease}
+.car-roof{transition:fill .6s ease}
+html[style*="--car-paint"] .car-body{fill:var(--car-paint)}
+html[style*="--car-paint"] .car-roof{fill:var(--car-roof)}
