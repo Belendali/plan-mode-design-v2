@@ -1929,6 +1929,36 @@ const ASSET_VARIANTS = {
             pink: 'ui-b-magenta', magenta: 'ui-b-magenta', purple: 'ui-b-magenta' },
   },
 };
+// The platform ships a library. Replacing a 3D asset is a search, not a prompt.
+const ASSET_TAG = {
+  'Player car': 'Vehicle', 'Cop car ×5': 'Vehicle',
+  'Block · brownstone': 'Environment', 'Block · storefront': 'Environment', 'Street props': 'Environment',
+  'Coin pickup': 'Prop',
+  'Wet asphalt': 'Material', 'Neon signage': 'Material',
+  'Night sky preset': 'Material', 'Rain particles': 'Material',
+  'Engine loop': 'Audio', 'Coin pickup SFX': 'Audio', 'Siren layer': 'Audio', 'Night city bed': 'Audio',
+  'HUD · speed': 'UI', 'HUD · timer': 'UI', 'Results screen': 'UI',
+};
+const LIBRARY = [
+  ['car-v2', 'Muscle · TS-2025', 'Vehicle', '2.4k tris'],
+  ['car-amber', 'Sunset GT', 'Vehicle', '3.1k tris'],
+  ['car-cyan', 'Ice Interceptor', 'Vehicle', '2.8k tris'],
+  ['car-magenta', 'Neon Roadster', 'Vehicle', '3.6k tris'],
+  ['car', 'Night Coupe', 'Vehicle', '2.6k tris'],
+  ['cop', 'Pursuit cruiser', 'Vehicle', '2.9k tris'],
+  ['block-a', 'Brownstone block', 'Environment', '1.2k tris'],
+  ['block-b', 'Storefront block', 'Environment', '1.5k tris'],
+  ['props', 'Street props kit', 'Environment', '860 tris'],
+  ['coin', 'Coin pickup', 'Prop', '320 tris'],
+  ['asphalt', 'Wet asphalt', 'Material', '2K PBR'],
+  ['neon', 'Neon signage', 'Material', '2K emissive'],
+  ['sky', 'Night sky preset', 'Material', 'HDRI'],
+  ['ui-a-v2', 'Segmented speed HUD', 'UI', 'Vector'],
+  ['ui-b-v2', 'Countdown timer HUD', 'UI', 'Vector'],
+  ['audio-a', 'Engine loop', 'Audio', '0:12 loop'],
+  ['audio-c', 'Siren layer', 'Audio', '0:08 loop'],
+];
+
 // name → { th, filter, ver } once the crew has reworked it
 const ASSET_STATE = {};
 // variants you chose to keep alongside the original
@@ -2284,7 +2314,7 @@ function assetShot(th, filter) {
   return `background-image:url('assets/thumb-${th}.jpg')${filter ? `;filter:${filter}` : ''}`;
 }
 
-function openAsset(name, baseTh) {
+function openAsset(name, baseTh, jump) {
   document.getElementById('ax')?.remove();
   const views = document.getElementById('views');
   if (!views) return;
@@ -2319,7 +2349,7 @@ function openAsset(name, baseTh) {
   const body = ax.querySelector('#ax-body');
   const spec = ASSET_VARIANTS[name] || {};
 
-  // 1 — resting: the two ways in
+  // 1 — resting: browse the library, or talk it over with the crew
   const rest = () => {
     const ver = (ASSET_STATE[name] || {}).ver || 1;
     foot.innerHTML = `
@@ -2327,11 +2357,11 @@ function openAsset(name, baseTh) {
         ? `Version ${ver} is in the build. <button class="ax__link" id="ax-revert">Revert to v1</button>`
         : 'In the build right now.'}</span>
       <span class="ax__acts">
-        <button class="ax__btn" id="ax-regen">↻ Regenerate</button>
-        <button class="ax__btn ax__btn--go" id="ax-ai">✦ Edit with AI</button>
+        <button class="ax__btn" id="ax-ai">✦ Edit with AI</button>
+        <button class="ax__btn ax__btn--go" id="ax-swapopen">⇄ Replace asset</button>
       </span>`;
-    foot.querySelector('#ax-regen').onclick = () => run('Another take on the same brief', spec.regen, null);
-    foot.querySelector('#ax-ai').onclick = ask;
+    foot.querySelector('#ax-swapopen').onclick = () => { close(); openLibrary(name, baseTh); };
+    foot.querySelector('#ax-ai').onclick = () => { close(); openAssetThread(name, by, baseTh); };
     const rv = foot.querySelector('#ax-revert');
     if (rv) rv.onclick = () => { applyAsset(name, null); paintShot(); rest();
       agentSay({ name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` },
@@ -2344,61 +2374,19 @@ function openAsset(name, baseTh) {
       style="${assetShot(l.th || baseTh, l.filter)}"></div></div>`;
   };
 
-  // 2 — say what you want
-  const ask = () => {
-    foot.innerHTML = `
-      <div class="ax__ask">
-        <div class="ax__chips">
-          ${(spec.chips || ['Make it amber', 'Warmer light', 'Match the neon signage'])
-            .map((c) => `<button class="ax__chip">${c}</button>`).join('')}
-        </div>
-        <div class="ax__row">
-          <input class="ax__input" id="ax-input" placeholder="Tell ${by} Wana what to change…">
-          <button class="ax__btn ax__btn--go" id="ax-send">Send</button>
-          <button class="ax__btn" id="ax-cancel">Cancel</button>
-        </div>
-      </div>`;
-    const inp = foot.querySelector('#ax-input');
-    foot.querySelectorAll('.ax__chip').forEach((c) => { c.onclick = () => { inp.value = c.textContent; inp.focus(); }; });
-    foot.querySelector('#ax-cancel').onclick = rest;
-    foot.querySelector('#ax-send').onclick = () => {
-      const t = inp.value.trim() || 'Make it amber';
-      const key = Object.keys(spec.tint || {}).find((k) => t.toLowerCase().includes(k));
-      run(t, key ? spec.tint[key] : spec.regen, key ? null : 'hue-rotate(196deg) saturate(1.35)');
-    };
-    inp.focus();
-  };
-
-  // 3 — the crew works on it, in the same step language as a build
-  const run = async (brief, th, filter) => {
-    const STEPS = ['Reading the asset in the build', 'Drafting takes', 'Rendering the winner'];
-    foot.innerHTML = `<span class="ax__note">${by} Wana · ${brief}</span>`;
-    body.innerHTML = `
-      <div class="ax__stage is-busy"><div class="ax__shot"
-           style="${assetShot((ASSET_STATE[name] || {}).th || baseTh, (ASSET_STATE[name] || {}).filter)}"></div>
-        <span class="ax__sweep"></span></div>
-      <ol class="ax__steps">${STEPS.map((t, i) => `<li id="ax-s-${i}"><i></i>${t}</li>`).join('')}</ol>`;
-    for (let i = 0; i < STEPS.length; i++) {
-      document.getElementById('ax-s-' + i).className = 'is-running';
-      await wait(900);
-      document.getElementById('ax-s-' + i).className = 'is-done';
-    }
-    await wait(300);
-    compare(brief, th || baseTh, filter);
-  };
-
-  // 4 — what is in the build vs what came back; nothing swaps on its own
-  const compare = (brief, th, filter) => {
+  // 2 — what is in the build vs what a thread came back with
+  const compare = (brief, th, filter, anim) => {
     const l = ASSET_STATE[name] || {};
     body.innerHTML = `
       <div class="ax__pair">
         <figure><div class="ax__shot" style="${assetShot(l.th || baseTh, l.filter)}"></div>
           <figcaption>In the build · v${l.ver || 1}</figcaption></figure>
-        <figure class="is-new"><div class="ax__shot" style="${assetShot(th, filter)}"></div>
-          <figcaption>New take · v${(l.ver || 1) + 1}</figcaption></figure>
+        <figure class="is-new"><div class="ax__shot${anim ? ' is-anim' : ''}"
+             style="${assetShot(th, filter)}"></div>
+          <figcaption>New take · v${(l.ver || 1) + 1}${anim ? ' · idle animation' : ''}</figcaption></figure>
       </div>`;
     foot.innerHTML = `
-      <span class="ax__note">${spec.note && th === spec.regen ? spec.note : brief}</span>
+      <span class="ax__note">${brief}</span>
       <span class="ax__acts">
         <button class="ax__btn" id="ax-drop">Discard</button>
         <button class="ax__btn" id="ax-keep">Keep both</button>
@@ -2415,7 +2403,7 @@ function openAsset(name, baseTh) {
         `Kept both — “${label}” is in the library next to the original.`);
     };
     foot.querySelector('#ax-swap').onclick = () => {
-      applyAsset(name, { th, filter, ver: (l.ver || 1) + 1 });
+      applyAsset(name, { th, filter, anim, ver: (l.ver || 1) + 1 });
       paintShot();
       rest();
       flashCard(name);
@@ -2424,7 +2412,162 @@ function openAsset(name, baseTh) {
     };
   };
 
-  rest();
+  if (jump) compare(jump.brief, jump.th, null, jump.anim);
+  else rest();
+}
+
+// ── The library panel ─────────────────────────────────────────────
+// The Assets pane becomes a browser: what Wana thinks fits on top, the whole
+// library underneath. No prompting — you are looking for a thing that exists.
+let LIB_PICK = null;
+
+function openLibrary(name, baseTh) {
+  const host = document.querySelector('.view[data-view="assets"] .built');
+  if (!host) return;
+  LIB_PICK = null;
+  const tag = ASSET_TAG[name] || 'Vehicle';
+  const live = ASSET_STATE[name] || {};
+  const cur = live.th || baseTh;
+  const picks = LIBRARY.filter((l) => l[2] === tag && l[0] !== cur).slice(0, 4);
+
+  host.innerHTML = `
+    <div class="pane">
+      <div class="libx__head">
+        <button class="libx__back" id="libx-back">← Assets</button>
+        <span class="libx__for">
+          <i style="background-image:url('assets/thumb-${cur}.jpg')"></i>
+          Replacing <b>${name}</b>
+        </span>
+        <input class="libx__search" id="libx-search" placeholder="Search the library…">
+      </div>
+      <section class="libx__sec">
+        <header><h3>Fits this slot</h3>
+          <span class="libx__by"><img src="assets/crew-planner.webp" alt="">Picked by Wana for ${name}</span>
+        </header>
+        <div class="libx__grid" id="libx-picks">${picks.map(libCard).join('')}</div>
+      </section>
+      <section class="libx__sec">
+        <header><h3>Everything in the library</h3>
+          <span class="libx__count" id="libx-count">${LIBRARY.length} assets</span></header>
+        <div class="libx__grid" id="libx-all">${LIBRARY.map(libCard).join('')}</div>
+      </section>
+    </div>
+    <div class="libx__bar" id="libx-bar">
+      <span class="libx__swap">
+        <i style="background-image:url('assets/thumb-${cur}.jpg')"></i>
+        <b>→</b>
+        <i id="libx-next"></i>
+        <span id="libx-label">Pick a replacement</span>
+      </span>
+      <span class="libx__acts">
+        <button class="ax__btn" id="libx-cancel">Cancel</button>
+        <button class="ax__btn ax__btn--go" id="libx-go">Replace in build</button>
+      </span>
+    </div>`;
+
+  const back = () => { LIB_PICK = null; host.innerHTML = assetsView(); };
+  host.querySelector('#libx-back').onclick = back;
+  host.querySelector('#libx-cancel').onclick = back;
+
+  const wire = () => {
+    host.querySelectorAll('.libc').forEach((c) => {
+      c.onclick = () => {
+        host.querySelectorAll('.libc').forEach((o) => o.classList.remove('is-picked'));
+        c.classList.add('is-picked');
+        LIB_PICK = LIBRARY.find((l) => l[0] === c.dataset.k);
+        host.querySelector('#libx-next').style.backgroundImage = `url('assets/thumb-${LIB_PICK[0]}.jpg')`;
+        host.querySelector('#libx-label').textContent = LIB_PICK[1];
+        host.querySelector('#libx-bar').classList.add('is-on');
+      };
+    });
+  };
+  wire();
+
+  const search = host.querySelector('#libx-search');
+  search.oninput = () => {
+    const q = search.value.trim().toLowerCase();
+    const hit = LIBRARY.filter((l) => !q || (l[1] + ' ' + l[2]).toLowerCase().includes(q));
+    host.querySelector('#libx-all').innerHTML = hit.map(libCard).join('');
+    host.querySelector('#libx-count').textContent = `${hit.length} asset${hit.length === 1 ? '' : 's'}`;
+    wire();
+  };
+
+  host.querySelector('#libx-go').onclick = () => {
+    if (!LIB_PICK) return;
+    const by = (ASSETS_LIB.find((g) => g.items.some((it) => it[0] === name)) || {}).by || 'Artist';
+    applyAsset(name, { th: LIB_PICK[0], filter: null, ver: (live.ver || 1) + 1 });
+    host.innerHTML = assetsView();
+    flashCard(name);
+    agentSay({ name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` },
+      `Swapped ${name} for “${LIB_PICK[1]}” from the library. It is in the build — say the word and I will put the old one back.`);
+    LIB_PICK = null;
+  };
+}
+
+function libCard(l) {
+  const [k, n, tag, meta] = l;
+  return `
+    <article class="libc" data-k="${k}">
+      <div class="libc__thumb" style="background-image:url('assets/thumb-${k}.jpg')"></div>
+      <span class="libc__name">${n}</span>
+      <span class="libc__meta">${tag} · ${meta}</span>
+    </article>`;
+}
+
+// ── A thread about one asset, in the chat ─────────────────────────
+function openAssetThread(name, by, baseTh) {
+  const live = ASSET_STATE[name] || {};
+  const th = live.th || baseTh;
+  const agent = { name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` };
+
+  document.getElementById('scope')?.remove();
+  const scope = el('div', 'scope');
+  scope.id = 'scope';
+  scope.innerHTML = `
+    <i style="background-image:url('assets/thumb-${th}.jpg')"></i>
+    <span>Editing <b>${name}</b></span>
+    <button aria-label="Leave this thread">✕</button>`;
+  const wrap = document.querySelector('.composer-wrap');
+  wrap.insertBefore(scope, wrap.querySelector('.composer'));
+  scope.querySelector('button').onclick = () => {
+    scope.remove();
+    input.placeholder = 'Tell Wana what to change…';
+  };
+
+  push(el('div', 'joined', `New thread · ${name}`));
+  agentSay(agent, `We are on ${name} now. Tell me what to change — the paint, the shape, whether it should move — and I will show you a version before anything lands in the build.`);
+  const chips = push(el('div', 'replies'));
+  const asks = ASSET_VARIANTS[name]
+    ? (ASSET_VARIANTS[name].chips || []).concat('Give it an idle animation')
+    : ['Warmer colour', 'Give it an idle animation'];
+  asks.forEach((t, i) => {
+    const b = el('button', 'reply' + (i === 0 ? ' reply--go' : ''), t);
+    b.onclick = () => { chips.remove(); threadEdit(name, by, baseTh, t); };
+    chips.appendChild(b);
+  });
+  input.placeholder = `Tell ${by} Wana about ${name}…`;
+  scrollDown();
+}
+
+// The thread does the work in chat, then opens the asset to compare.
+async function threadEdit(name, by, baseTh, brief) {
+  const agent = { name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` };
+  push(el('div', 'msg msg--user', brief));
+  const spec = ASSET_VARIANTS[name] || {};
+  const live = ASSET_STATE[name] || {};
+  // "make it move" is not a new model — it is the same asset with motion on it
+  const anim = /animat|idle|move|bob/i.test(brief);
+  const key = Object.keys(spec.tint || {}).find((k) => brief.toLowerCase().includes(k));
+  const th = anim ? (live.th || baseTh) : (key ? spec.tint[key] : spec.regen || baseTh);
+  await wait(600);
+  agentSay(agent, `On it — ${brief.toLowerCase()}.`);
+  for (const t of ['Reading the asset in the build', 'Drafting takes', 'Rendering the winner']) {
+    await wait(800);
+    readLine(t + ' ✓');
+  }
+  await wait(500);
+  agentSay(agent, 'Here it is next to the one in the build — replace it, or keep both.');
+  openAsset(name, baseTh, { th, brief, anim });
 }
 
 // An asset is not a picture in a drawer — swapping it shows up in the game.
@@ -2442,6 +2585,8 @@ function applyAsset(name, next) {
   else delete ASSET_STATE[name];
   repaintAssets();
   if (name === 'Player car') {
+    document.querySelectorAll('.sc-car, .gd-player').forEach((c) =>
+      c.classList.toggle('is-idle', !!(next && next.anim)));
     const paint = next && CAR_PAINT[next.th];
     const root = document.documentElement.style;
     if (paint) { root.setProperty('--car-paint', paint[0]); root.setProperty('--car-roof', paint[1]); }

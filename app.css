@@ -2038,3 +2038,75 @@ html[style*="--car-paint"] .car-roof{fill:var(--car-roof)}
 .card em{min-height:18px;margin-top:10px}
 .card__bar{width:100%;margin-top:2px}
 .card__cta{margin-top:14px}
+
+/* ── Library panel: find and replace, not prompt and hope ─────────── */
+.libx__head{
+  display:flex;align-items:center;gap:14px;padding:22px 28px 14px;margin:-26px -30px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;z-index:2;
+  background:#0F0C11;
+}
+.libx__back{
+  height:32px;padding:6px 14px;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:#fff;
+  font-family:var(--font);font-size:13px;
+}
+.libx__back:hover{background:rgba(255,255,255,.15)}
+.libx__for{display:flex;align-items:center;gap:9px;font-size:13.5px;color:rgba(255,255,255,.55)}
+.libx__for b{color:#fff;font-weight:600}
+.libx__for i{width:34px;height:24px;border-radius:6px;background-size:cover;background-position:center;display:block}
+.libx__search{
+  margin-left:auto;width:300px;height:34px;padding:8px 14px;border-radius:11px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);color:#fff;
+  font-family:var(--font);font-size:13.5px;
+}
+.libx__search:focus{outline:none;border-color:rgba(192,240,0,.5)}
+.libx__sec{padding:20px 0 4px}
+.libx__sec:last-of-type{padding-bottom:100px}
+.libx__sec header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.libx__sec h3{margin:0;font-size:15px;font-weight:600;color:#fff}
+.libx__by{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.45)}
+.libx__by img{width:22px;height:22px;border-radius:50%;object-fit:cover;background:#3a3536}
+.libx__count{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.38)}
+.libx__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px}
+.libc{
+  display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:14px;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);
+  transition:transform .16s ease,border-color .16s ease,background .16s ease;
+}
+.libc:hover{transform:translateY(-3px);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2)}
+.libc.is-picked{border-color:var(--lime);background:rgba(192,240,0,.08);
+  box-shadow:0 0 0 3px rgba(192,240,0,.14)}
+.libc__thumb{width:100%;aspect-ratio:16/10;border-radius:9px;background-size:cover;background-position:center}
+.libc__name{margin-top:5px;font-size:12.5px;color:#fff}
+.libc__meta{font-family:var(--font-mono);font-size:10.5px;color:rgba(255,255,255,.35)}
+.libx__bar{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 28px;
+  background:rgba(16,13,18,.96);border-top:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transform:translateY(110%);transition:transform .3s cubic-bezier(.2,.85,.3,1);
+}
+.libx__bar.is-on{transform:none}
+.libx__swap{display:flex;align-items:center;gap:12px;font-size:13.5px;color:#fff}
+.libx__swap i{width:52px;height:34px;border-radius:8px;background-size:cover;background-position:center;
+  background-color:rgba(255,255,255,.06);display:block}
+.libx__swap b{color:rgba(255,255,255,.4);font-weight:400}
+.libx__acts{display:flex;gap:10px}
+
+/* the composer knows which asset you are talking about */
+.scope{
+  display:flex;align-items:center;gap:9px;margin:0 0 8px;padding:7px 10px;border-radius:12px;
+  background:rgba(192,240,0,.1);border:1px solid rgba(192,240,0,.3);
+  font-size:12.5px;color:rgba(255,255,255,.75);
+}
+.scope i{width:30px;height:21px;border-radius:5px;background-size:cover;background-position:center;display:block}
+.scope b{color:#fff;font-weight:600}
+.scope button{
+  margin-left:auto;width:22px;height:22px;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.1);border:0;color:rgba(255,255,255,.7);font-size:11px;
+}
+.scope button:hover{background:rgba(255,255,255,.25);color:#fff}
+/* motion, when the asset was asked to move */
+@keyframes carIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.sc-car.is-idle,.gd-player.is-idle{animation:carIdle 2.4s ease-in-out infinite}
+.ax__shot.is-anim{animation:carIdle 2.4s ease-in-out infinite}
