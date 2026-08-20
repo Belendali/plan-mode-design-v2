@@ -949,8 +949,8 @@ body{
 @keyframes loginIn{from{opacity:0}to{opacity:1}}
 .login.is-leaving{opacity:0;transition:opacity .3s ease}
 .login__veil{
-  position:absolute;inset:0;background:rgba(6,4,8,.62);
-  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  position:absolute;inset:0;background:rgba(6,4,8,.34);
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
 }
 .login__card{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);

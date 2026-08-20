@@ -1529,6 +1529,8 @@ function screenSite() {
 function screenLogin(ask) {
   const old = document.getElementById('login');
   if (old) old.remove();
+  // the card floats over the real product, so the Studio is already there behind it
+  mountStudio();
   const w = el('div', 'login');
   w.id = 'login';
   w.innerHTML = `
