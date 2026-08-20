@@ -1902,6 +1902,22 @@ const ASSETS_LIB = [
     ['HUD · speed', 'ready', 'ui-a'], ['HUD · timer', 'ready', 'ui-b'], ['Results screen', 'queued', 'ui-c'] ] },
 ];
 
+// What a rework of an asset can produce. Anything not listed here gets a
+// re-grade of the same shot — enough to read as "this is a different take".
+const ASSET_VARIANTS = {
+  'HUD · speed': {
+    regen: 'ui-a-v2',
+    note: 'Segmented gauge, live readout',
+    tint: { amber: 'ui-a-amber', orange: 'ui-a-amber', warm: 'ui-a-amber',
+            cyan: 'ui-a-cyan', blue: 'ui-a-cyan', ice: 'ui-a-cyan',
+            pink: 'ui-a-magenta', magenta: 'ui-a-magenta', purple: 'ui-a-magenta' },
+  },
+};
+// name → { th, filter, ver } once the crew has reworked it
+const ASSET_STATE = {};
+// variants you chose to keep alongside the original
+const ASSET_KEPT = [];
+
 const CODE_TREE = ['game.config.ts', 'scenes/NightStreets.ts', 'systems/Drive.ts',
                    'systems/Pursuit.ts', 'systems/Pickups.ts', 'ui/Hud.ts'];
 const CODE_LINES = [
@@ -2219,16 +2235,213 @@ function assetsView() {
             <header><h3>${g.group}</h3><span class="lib__by">
               <img src="assets/crew-${g.by.toLowerCase()}.webp" alt="">${g.by} Wana</span></header>
             <div class="lib__grid">
-              ${g.items.map(([n, st, th]) => `
-                <article class="asset is-${st}">
-                  <div class="asset__thumb" style="background-image:url('assets/thumb-${th}.jpg')"></div>
-                  <span class="asset__name">${n}</span>
-                  <span class="asset__state">${st}</span>
-                </article>`).join('')}
+              ${g.items.concat(ASSET_KEPT.filter((k) => k[3] === g.group))
+                 .map(([n, st, th]) => assetCard(n, st, th)).join('')}
             </div>
           </section>`).join('')}
       </div>
     </div>`;
+}
+
+function assetCard(n, st, th) {
+  const cur = ASSET_STATE[n] || {};
+  const src = cur.th || th;
+  const ver = cur.ver || 1;
+  return `
+    <article class="asset is-${st}" data-asset="${n}" data-th="${th}">
+      <div class="asset__thumb" style="background-image:url('assets/thumb-${src}.jpg')${
+        cur.filter ? `;filter:${cur.filter}` : ''}"></div>
+      ${ver > 1 ? `<span class="asset__ver">v${ver}</span>` : ''}
+      ${st === 'ready' ? '<span class="asset__edit">Edit</span>' : ''}
+      <span class="asset__name">${n}</span>
+      <span class="asset__state">${st}</span>
+    </article>`;
+}
+
+// ── Opening one asset ─────────────────────────────────────────────
+// Blown up, with the two ways to change it: ask for another take, or say
+// what you want. Whatever comes back is compared against what is in the
+// build right now — nothing is swapped until you say so.
+document.addEventListener('click', (e) => {
+  const card = e.target.closest && e.target.closest('.asset.is-ready');
+  if (card && card.dataset.asset) openAsset(card.dataset.asset, card.dataset.th);
+});
+
+function assetShot(th, filter) {
+  return `background-image:url('assets/thumb-${th}.jpg')${filter ? `;filter:${filter}` : ''}`;
+}
+
+function openAsset(name, baseTh) {
+  document.getElementById('ax')?.remove();
+  const views = document.getElementById('views');
+  if (!views) return;
+  const group = (ASSETS_LIB.find((g) => g.items.some((it) => it[0] === name)) || {});
+  const by = group.by || 'Artist';
+  const live = ASSET_STATE[name] || {};
+
+  const ax = el('div', 'ax');
+  ax.id = 'ax';
+  ax.innerHTML = `
+    <div class="ax__veil"></div>
+    <div class="ax__panel">
+      <header class="ax__head">
+        <span class="ax__who"><img src="assets/crew-${by.toLowerCase()}.webp" alt="">${by} Wana</span>
+        <b>${name}</b>
+        <span class="ax__meta">${group.group || 'Asset'} · v${live.ver || 1}</span>
+        <button class="ax__x" id="ax-x" aria-label="Close">✕</button>
+      </header>
+      <div class="ax__body" id="ax-body">
+        <div class="ax__stage"><div class="ax__shot" id="ax-shot"
+             style="${assetShot(live.th || baseTh, live.filter)}"></div></div>
+      </div>
+      <footer class="ax__foot" id="ax-foot"></footer>
+    </div>`;
+  views.appendChild(ax);
+  // no rAF gate — a backgrounded pane can throttle it and leave the panel invisible
+  const close = () => { ax.classList.add('is-leaving'); setTimeout(() => ax.remove(), 240); };
+  ax.querySelector('#ax-x').onclick = close;
+  ax.querySelector('.ax__veil').onclick = close;
+
+  const foot = ax.querySelector('#ax-foot');
+  const body = ax.querySelector('#ax-body');
+  const spec = ASSET_VARIANTS[name] || {};
+
+  // 1 — resting: the two ways in
+  const rest = () => {
+    const ver = (ASSET_STATE[name] || {}).ver || 1;
+    foot.innerHTML = `
+      <span class="ax__note">${ver > 1
+        ? `Version ${ver} is in the build. <button class="ax__link" id="ax-revert">Revert to v1</button>`
+        : 'In the build right now.'}</span>
+      <span class="ax__acts">
+        <button class="ax__btn" id="ax-regen">↻ Regenerate</button>
+        <button class="ax__btn ax__btn--go" id="ax-ai">✦ Edit with AI</button>
+      </span>`;
+    foot.querySelector('#ax-regen').onclick = () => run('Another take on the same brief', spec.regen, null);
+    foot.querySelector('#ax-ai').onclick = ask;
+    const rv = foot.querySelector('#ax-revert');
+    if (rv) rv.onclick = () => { applyAsset(name, null); paintShot(); rest();
+      agentSay({ name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` },
+        `Rolled ${name} back to v1.`); };
+  };
+
+  const paintShot = () => {
+    const l = ASSET_STATE[name] || {};
+    body.innerHTML = `<div class="ax__stage"><div class="ax__shot" id="ax-shot"
+      style="${assetShot(l.th || baseTh, l.filter)}"></div></div>`;
+  };
+
+  // 2 — say what you want
+  const ask = () => {
+    foot.innerHTML = `
+      <div class="ax__ask">
+        <div class="ax__chips">
+          ${['Make it amber', 'Segmented gauge, bigger numbers', 'Match the neon signage']
+            .map((c) => `<button class="ax__chip">${c}</button>`).join('')}
+        </div>
+        <div class="ax__row">
+          <input class="ax__input" id="ax-input" placeholder="Tell ${by} Wana what to change…">
+          <button class="ax__btn ax__btn--go" id="ax-send">Send</button>
+          <button class="ax__btn" id="ax-cancel">Cancel</button>
+        </div>
+      </div>`;
+    const inp = foot.querySelector('#ax-input');
+    foot.querySelectorAll('.ax__chip').forEach((c) => { c.onclick = () => { inp.value = c.textContent; inp.focus(); }; });
+    foot.querySelector('#ax-cancel').onclick = rest;
+    foot.querySelector('#ax-send').onclick = () => {
+      const t = inp.value.trim() || 'Make it amber';
+      const key = Object.keys(spec.tint || {}).find((k) => t.toLowerCase().includes(k));
+      run(t, key ? spec.tint[key] : spec.regen, key ? null : 'hue-rotate(196deg) saturate(1.35)');
+    };
+    inp.focus();
+  };
+
+  // 3 — the crew works on it, in the same step language as a build
+  const run = async (brief, th, filter) => {
+    const STEPS = ['Reading the asset in the build', 'Drafting takes', 'Rendering the winner'];
+    foot.innerHTML = `<span class="ax__note">${by} Wana · ${brief}</span>`;
+    body.innerHTML = `
+      <div class="ax__stage is-busy"><div class="ax__shot"
+           style="${assetShot((ASSET_STATE[name] || {}).th || baseTh, (ASSET_STATE[name] || {}).filter)}"></div>
+        <span class="ax__sweep"></span></div>
+      <ol class="ax__steps">${STEPS.map((t, i) => `<li id="ax-s-${i}"><i></i>${t}</li>`).join('')}</ol>`;
+    for (let i = 0; i < STEPS.length; i++) {
+      document.getElementById('ax-s-' + i).className = 'is-running';
+      await wait(900);
+      document.getElementById('ax-s-' + i).className = 'is-done';
+    }
+    await wait(300);
+    compare(brief, th || baseTh, filter);
+  };
+
+  // 4 — what is in the build vs what came back; nothing swaps on its own
+  const compare = (brief, th, filter) => {
+    const l = ASSET_STATE[name] || {};
+    body.innerHTML = `
+      <div class="ax__pair">
+        <figure><div class="ax__shot" style="${assetShot(l.th || baseTh, l.filter)}"></div>
+          <figcaption>In the build · v${l.ver || 1}</figcaption></figure>
+        <figure class="is-new"><div class="ax__shot" style="${assetShot(th, filter)}"></div>
+          <figcaption>New take · v${(l.ver || 1) + 1}</figcaption></figure>
+      </div>`;
+    foot.innerHTML = `
+      <span class="ax__note">${spec.note && th === spec.regen ? spec.note : brief}</span>
+      <span class="ax__acts">
+        <button class="ax__btn" id="ax-drop">Discard</button>
+        <button class="ax__btn" id="ax-keep">Keep both</button>
+        <button class="ax__btn ax__btn--go" id="ax-swap">Replace in build</button>
+      </span>`;
+    foot.querySelector('#ax-drop').onclick = () => { paintShot(); rest(); };
+    foot.querySelector('#ax-keep').onclick = () => {
+      const label = `${name} · v${(l.ver || 1) + 1}`;
+      ASSET_KEPT.push([label, 'ready', th, group.group]);
+      ASSET_STATE[label] = { th, filter, ver: (l.ver || 1) + 1 };
+      repaintAssets();
+      close();
+      agentSay({ name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` },
+        `Kept both — “${label}” is in the library next to the original.`);
+    };
+    foot.querySelector('#ax-swap').onclick = () => {
+      applyAsset(name, { th, filter, ver: (l.ver || 1) + 1 });
+      paintShot();
+      rest();
+      flashCard(name);
+      agentSay({ name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` },
+        `${name} is now v${(ASSET_STATE[name] || {}).ver} in the build — ${brief.toLowerCase()}. The old one is still there if you want it back.`);
+    };
+  };
+
+  rest();
+}
+
+// An asset is not a picture in a drawer — swapping it shows up in the game.
+const ASSET_ACCENT = { 'ui-a-amber': '#FFA82C', 'ui-a-cyan': '#40D6FF',
+                       'ui-a-magenta': '#FF56C4', 'ui-a-v2': '#C0F000' };
+function applyAsset(name, next) {
+  if (next) ASSET_STATE[name] = next;
+  else delete ASSET_STATE[name];
+  repaintAssets();
+  if (name === 'HUD · speed') {
+    const pv = document.querySelector('.view--preview');
+    if (pv) {
+      pv.style.setProperty('--hud-accent', (next && ASSET_ACCENT[next.th]) || '#ffffff');
+      const r = pv.querySelector('.hud2__r');
+      if (r) { r.classList.remove('is-swapped'); void r.offsetWidth; r.classList.add('is-swapped'); }
+    }
+  }
+}
+
+function repaintAssets() {
+  const v = document.querySelector('.view[data-view="assets"] .built');
+  if (v) v.innerHTML = assetsView();
+}
+
+function flashCard(name) {
+  const c = document.querySelector(`.asset[data-asset="${CSS.escape(name)}"]`);
+  if (!c) return;
+  c.classList.add('is-swapped');
+  c.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => c.classList.remove('is-swapped'), 1500);
 }
 
 function codeView() {

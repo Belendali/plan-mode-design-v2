@@ -1921,3 +1921,107 @@ body{
 /* the welcome has no target to point at, so Wanaka stands dead centre */
 .tour.is-centre .tour__wana{left:835px;bottom:517px}
 .tour.is-centre .tour__bubble{left:745px;bottom:312px}
+
+/* ── Editing one asset ────────────────────────────────────────────── */
+.asset{position:relative}
+.asset.is-ready{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
+.asset.is-ready:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.asset__ver{
+  position:absolute;left:10px;top:10px;z-index:2;padding:2px 8px;border-radius:20px;
+  background:rgba(192,240,0,.9);color:#141414;
+  font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.06em;
+}
+.asset__edit{
+  position:absolute;right:10px;top:10px;z-index:2;padding:4px 10px;border-radius:9px;
+  background:rgba(10,8,12,.8);border:1px solid rgba(255,255,255,.16);color:#fff;
+  font-size:11px;opacity:0;transform:translateY(-3px);transition:opacity .18s,transform .18s;
+}
+.asset.is-ready:hover .asset__edit{opacity:1;transform:none}
+.asset.is-swapped{animation:assetSwap 1.5s ease}
+@keyframes assetSwap{
+  0%{box-shadow:0 0 0 0 rgba(192,240,0,.7)}
+  30%{box-shadow:0 0 0 6px rgba(192,240,0,.28)}
+  100%{box-shadow:0 0 0 0 rgba(192,240,0,0)}
+}
+
+.ax{position:absolute;inset:0;z-index:9;animation:loginIn .24s ease}
+.ax.is-leaving{opacity:0;transition:opacity .24s ease;pointer-events:none}
+.ax__veil{position:absolute;inset:0;background:rgba(6,4,8,.72);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ax__panel{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:1000px;max-height:88%;display:flex;flex-direction:column;
+  border-radius:20px;overflow:hidden;
+  background:#16131A;border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 44px 120px rgba(0,0,0,.66);
+}
+.ax__panel{animation:loginCard .34s cubic-bezier(.2,.85,.3,1)}
+.ax__head{
+  display:flex;align-items:center;gap:12px;padding:14px 18px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.ax__head b{font-size:15px;font-weight:600;color:#fff}
+.ax__who{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.55)}
+.ax__who img{width:24px;height:24px;border-radius:50%;object-fit:cover;background:#3a3536}
+.ax__meta{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.38)}
+.ax__x{margin-left:auto;width:30px;height:30px;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.75)}
+.ax__x:hover{background:rgba(255,255,255,.16);color:#fff}
+.ax__body{padding:20px;overflow-y:auto;scrollbar-width:none}
+.ax__body::-webkit-scrollbar{display:none}
+.ax__stage{position:relative;border-radius:14px;overflow:hidden;background:#0D0B10}
+.ax__shot{width:100%;aspect-ratio:16/10;background-size:cover;background-position:center}
+.ax__sweep{
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,138,61,.28) 50%,transparent 62%);
+  background-size:260% 100%;animation:axSweep 1.5s linear infinite;
+}
+@keyframes axSweep{from{background-position:140% 0}to{background-position:-140% 0}}
+.ax__steps{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ax__steps li{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.34)}
+.ax__steps li i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);flex:none}
+.ax__steps li.is-running{color:#fff}
+.ax__steps li.is-running i{background:#FF8A3D;box-shadow:0 0 0 4px rgba(255,138,61,.18)}
+.ax__steps li.is-done{color:rgba(255,255,255,.6)}
+.ax__steps li.is-done i{background:var(--lime)}
+.ax__pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ax__pair figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.ax__pair .ax__shot{border-radius:12px;border:1px solid rgba(255,255,255,.1)}
+.ax__pair figcaption{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(255,255,255,.42)}
+.ax__pair .is-new .ax__shot{border-color:rgba(192,240,0,.55);box-shadow:0 0 0 3px rgba(192,240,0,.12)}
+.ax__pair .is-new figcaption{color:var(--lime)}
+.ax__foot{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+}
+.ax__note{font-size:13px;color:rgba(255,255,255,.5)}
+.ax__link{background:none;border:0;padding:0;cursor:pointer;color:var(--lime);
+  font:inherit;text-decoration:underline}
+.ax__acts{display:flex;gap:10px;margin-left:auto}
+.ax__btn{
+  height:36px;padding:8px 16px;border-radius:11px;cursor:pointer;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;
+  font-family:var(--font);font-size:13.5px;
+}
+.ax__btn:hover{background:rgba(255,255,255,.16)}
+.ax__btn--go{background:var(--lime);border-color:transparent;color:#141414;font-weight:600}
+.ax__btn--go:hover{filter:brightness(1.08);background:var(--lime)}
+.ax__ask{width:100%;display:flex;flex-direction:column;gap:10px}
+.ax__chips{display:flex;gap:8px;flex-wrap:wrap}
+.ax__chip{
+  padding:6px 12px;border-radius:20px;cursor:pointer;font-size:12.5px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.8);
+}
+.ax__chip:hover{background:rgba(192,240,0,.14);border-color:rgba(192,240,0,.4);color:#fff}
+.ax__row{display:flex;gap:10px}
+.ax__input{
+  flex:1;height:36px;padding:8px 14px;border-radius:11px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#fff;
+  font-family:var(--font);font-size:13.5px;
+}
+.ax__input:focus{outline:none;border-color:rgba(192,240,0,.5)}
+/* the speed readout in the running game wears whatever HUD asset is in the build */
+.hud2__r b,.hud2__r .hud2__k{color:var(--hud-accent,#fff);transition:color .5s ease}
+.hud2__r.is-swapped{animation:assetSwap 1.5s ease;border-radius:10px}
