@@ -1336,7 +1336,6 @@ async function runMention(text) {
     if (soloCard) soloCard.className = 'card is-working';
     for (let i = 0; i < STEPS_ART.length; i++) {
       setSubtask(i, 'running');
-      deckStep('artist', i, 'running');
       if (soloDoing) soloDoing.textContent = STEPS_ART[i].label;
       setProgress('artist', Math.round((i / STEPS_ART.length) * 100));
       setStatus(STEPS_ART[i].label + '…', false);
@@ -1345,7 +1344,6 @@ async function runMention(text) {
       if (scene) scene.classList.add('is-desert');   // the editor changes with the game
       await wait(1300);
       setSubtask(i, 'done');
-      deckStep('artist', i, 'done');
       readLine(STEPS_ART[i].line);
     }
     setProgress('artist', 100);
@@ -2101,9 +2099,6 @@ function crewDeck(cards) {
           <span class="card__face"><img src="assets/crew-${j.key}.webp" alt=""></span>
           <b>${j.name}</b>
           <span class="card__stage">${j.stage}</span>
-          <ol class="card__steps">
-            ${j.steps.map((t, k) => `<li id="tick-${j.key}-${k}"><i></i>${t}</li>`).join('')}
-          </ol>
           <em id="mini-${j.key}-doing">waiting</em>
           <span class="card__bar"><i id="deckfill-${j.key}"></i></span>
           <button class="card__cta">Confirm the next step →</button>
@@ -2564,19 +2559,12 @@ function mountTasks() {
 function setTask(key, i, state) {
   const t = document.getElementById(`task-${key}-${i}`);
   if (t) t.className = 'task is-' + state;
-  deckStep(key, i, state);
   if (state === 'done') studioSpawn(key, i);
   const c = document.getElementById('ed-gen-count');
   paintOverall();
   paintStages();
   const txt = document.getElementById('overall-txt');
   if (c && txt) c.textContent = txt.textContent.replace(' done', '').split(' · ')[0];
-}
-function deckStep(key, i, state) {
-  const tick = document.getElementById(`tick-${key}-${i}`);
-  if (!tick) return;
-  tick.className = 'is-' + state;
-  if (state === 'running') tick.scrollIntoView({ block: 'nearest' });
 }
 // one line that answers "how far along is this build?"
 function paintOverall() {

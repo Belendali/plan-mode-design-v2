@@ -1864,26 +1864,17 @@ body{
   font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
   color:rgba(255,255,255,.4);font-weight:600;
 }
-.card__steps{
   list-style:none;margin:12px 0 4px;padding:12px 0 0;width:100%;
   border-top:1px solid rgba(255,255,255,.09);
   display:flex;flex-direction:column;gap:7px;text-align:left;
 }
-.card__steps li{
   display:flex;align-items:center;gap:9px;font-size:12.5px;line-height:1.35;
   color:rgba(255,255,255,.34);transition:color .35s ease;
 }
-.card__steps li i{
   width:6px;height:6px;border-radius:50%;flex:none;display:block;
   background:rgba(255,255,255,.2);transition:background .35s ease,box-shadow .35s ease;
 }
-.card__steps li.is-running{color:#fff}
-.card__steps li.is-running i{background:#FF8A3D;box-shadow:0 0 0 4px rgba(255,138,61,.18);
   animation:stepPing 1.5s ease-in-out infinite}
-.card__steps li.is-review{color:#FFD666}
-.card__steps li.is-review i{background:#FFD666;box-shadow:0 0 0 4px rgba(255,214,102,.2)}
-.card__steps li.is-done{color:rgba(255,255,255,.62)}
-.card__steps li.is-done i{background:var(--lime)}
 @keyframes stepPing{
   0%,100%{box-shadow:0 0 0 3px rgba(255,138,61,.22)}
   50%{box-shadow:0 0 0 7px rgba(255,138,61,0)}
@@ -1891,7 +1882,6 @@ body{
 .card em{font-size:12.5px;margin-top:4px}
 .card__bar{width:100%;margin-top:6px}
 /* four-step and three-step crews share one card height, so rotating is calm */
-.card__steps{min-height:90px;justify-content:flex-start}
 .card__cta{margin-top:10px}
 /* a single-Wana rework has nothing to page through */
 .deck.is-solo .deck__nav,.deck.is-solo .deck__dots{display:none}
@@ -2038,3 +2028,13 @@ body{
 .car-roof{transition:fill .6s ease}
 html[style*="--car-paint"] .car-body{fill:var(--car-paint)}
 html[style*="--car-paint"] .car-roof{fill:var(--car-roof)}
+
+/* Every crew card is the same card: who, what they are on, one bar. */
+.card{
+  min-height:340px;justify-content:center;gap:7px;padding:26px;
+}
+.card__face,.card__face img{height:150px}
+.card b{margin-top:4px}
+.card em{min-height:18px;margin-top:10px}
+.card__bar{width:100%;margin-top:2px}
+.card__cta{margin-top:14px}
