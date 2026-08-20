@@ -1661,7 +1661,7 @@ const TOUR = [
   { cat: 'idle', focus: 'chat', at: 'left',
     copy: "Tell me what you want right here. I've got a whole crew of cat engineers to plan it out and walk you from nothing to something you can play." },
   { cat: 'idle', focus: 'edit', at: 'right',
-    copy: "And this is your Studio. Move things, swap models, light the scene — the crew fills it in, and you can always take the wheel yourself." },
+    copy: "This whole left side is your canvas — edit the scene, keep your assets in order, and play the build right here. The crew fills it in, and you can take the wheel any time." },
   { cat: 'idle', focus: null, at: 'aside', crew: true,
     copy: "Now come meet my crew. Every one of them is a specialist, and they'll be with you the whole way." },
 ];
