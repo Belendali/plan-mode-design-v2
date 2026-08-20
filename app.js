@@ -1516,8 +1516,6 @@ function screenSite() {
   });
   const go = () => {
     const ask = document.getElementById('site-input').value.trim() || SITE.seed;
-    site.classList.add('is-leaving');
-    setTimeout(() => site.remove(), 420);
     screenLogin(ask);
   };
   site.querySelector('#site-create').onclick = go;
@@ -1525,12 +1523,12 @@ function screenSite() {
   return site;
 }
 
-// The sign-in card floats over the Studio, so you can already see where you landed.
+// The sign-in card floats over wanaka.app — you have not landed in the Studio yet.
 function screenLogin(ask) {
   const old = document.getElementById('login');
   if (old) old.remove();
-  // the card floats over the real product, so the Studio is already there behind it
-  mountStudio();
+  // deep-linked straight to sign-in, so put the home page behind it
+  if (!document.getElementById('site')) screenSite();
   const w = el('div', 'login');
   w.id = 'login';
   w.innerHTML = `
@@ -1556,6 +1554,11 @@ function screenLogin(ask) {
   const enter = () => {
     w.classList.add('is-leaving');
     setTimeout(() => w.remove(), 320);
+    const site = document.getElementById('site');
+    if (site) {
+      site.classList.add('is-leaving');
+      setTimeout(() => site.remove(), 420);
+    }
     startOnboarding(ask);
   };
   w.querySelector('#login-go').onclick = enter;
