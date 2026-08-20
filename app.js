@@ -1912,6 +1912,13 @@ const ASSET_VARIANTS = {
             cyan: 'ui-a-cyan', blue: 'ui-a-cyan', ice: 'ui-a-cyan',
             pink: 'ui-a-magenta', magenta: 'ui-a-magenta', purple: 'ui-a-magenta' },
   },
+  'HUD · timer': {
+    regen: 'ui-b-v2',
+    note: 'Countdown ring, time-left bar',
+    tint: { amber: 'ui-b-amber', orange: 'ui-b-amber', warm: 'ui-b-amber',
+            cyan: 'ui-b-cyan', blue: 'ui-b-cyan', ice: 'ui-b-cyan',
+            pink: 'ui-b-magenta', magenta: 'ui-b-magenta', purple: 'ui-b-magenta' },
+  },
 };
 // name → { th, filter, ver } once the crew has reworked it
 const ASSET_STATE = {};
@@ -2415,18 +2422,19 @@ function openAsset(name, baseTh) {
 }
 
 // An asset is not a picture in a drawer — swapping it shows up in the game.
-const ASSET_ACCENT = { 'ui-a-amber': '#FFA82C', 'ui-a-cyan': '#40D6FF',
-                       'ui-a-magenta': '#FF56C4', 'ui-a-v2': '#C0F000' };
+const ASSET_ACCENT = { amber: '#FFA82C', cyan: '#40D6FF', magenta: '#FF56C4', v2: '#C0F000' };
+const HUD_SLOT = { 'HUD · speed': '.hud2__r', 'HUD · timer': '.hud2__l' };
 function applyAsset(name, next) {
   if (next) ASSET_STATE[name] = next;
   else delete ASSET_STATE[name];
   repaintAssets();
-  if (name === 'HUD · speed') {
-    const pv = document.querySelector('.view--preview');
-    if (pv) {
-      pv.style.setProperty('--hud-accent', (next && ASSET_ACCENT[next.th]) || '#ffffff');
-      const r = pv.querySelector('.hud2__r');
-      if (r) { r.classList.remove('is-swapped'); void r.offsetWidth; r.classList.add('is-swapped'); }
+  const slot = HUD_SLOT[name];
+  if (slot) {
+    const r = document.querySelector('.view--preview ' + slot);
+    if (r) {
+      const key = next && Object.keys(ASSET_ACCENT).find((k) => next.th.endsWith(k));
+      r.style.setProperty('--hud-accent', (key && ASSET_ACCENT[key]) || '#ffffff');
+      r.classList.remove('is-swapped'); void r.offsetWidth; r.classList.add('is-swapped');
     }
   }
 }

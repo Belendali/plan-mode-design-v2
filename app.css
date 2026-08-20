@@ -1774,7 +1774,10 @@ body{
 /* ── Studio follows the game into the desert ─────────────────────── */
 #ed-scene .sc-desert{opacity:0;transition:opacity 1.4s ease;pointer-events:none}
 #ed-scene.is-desert .sc-desert{opacity:1}
-#ed-scene.is-desert .sc-block,#ed-scene.is-desert .sc-lamp{opacity:0;transition:opacity .9s ease}
+/* blockRise/lampOn are fill:both, so plain opacity loses — fade them out with
+   an animation of the same weight instead */
+@keyframes scGone{from{opacity:1}to{opacity:0}}
+#ed-scene.is-desert .sc-block,#ed-scene.is-desert .sc-lamp{animation:scGone .9s ease both}
 #ed-scene.is-desert .sc-road{fill:#4A3122}
 #ed-scene.is-desert .sc-lane rect{fill:#FFF3D6}
 
@@ -2023,5 +2026,5 @@ body{
 }
 .ax__input:focus{outline:none;border-color:rgba(192,240,0,.5)}
 /* the speed readout in the running game wears whatever HUD asset is in the build */
-.hud2__r b,.hud2__r .hud2__k{color:var(--hud-accent,#fff);transition:color .5s ease}
-.hud2__r.is-swapped{animation:assetSwap 1.5s ease;border-radius:10px}
+.hud2__r b,.hud2__r .hud2__k,.hud2__l b,.hud2__l .hud2__k{color:var(--hud-accent,#fff);transition:color .5s ease}
+.hud2__r.is-swapped,.hud2__l.is-swapped{animation:assetSwap 1.5s ease;border-radius:10px}
