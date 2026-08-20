@@ -1037,6 +1037,7 @@ function planDoc() {
             <span class="keyart__tag">Where it can get to</span>
             Keep building and this is the game at the end of the road.
           </figcaption>
+          <span class="keyart__cue">Scroll for the full plan<i>⌄</i></span>
         </figure>
         <div class="firstcut">
           <figure class="firstcut__shot">

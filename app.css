@@ -1892,3 +1892,28 @@ body{
 .card__cta{margin-top:10px}
 /* a single-Wana rework has nothing to page through */
 .deck.is-solo .deck__nav,.deck.is-solo .deck__dots{display:none}
+
+/* ── The key art gets the whole first screen ─────────────────────── */
+.keyart{height:1080px}
+.keyart img{object-position:center 34%}
+.keyart::after{height:420px;
+  background:linear-gradient(180deg,rgba(22,20,15,0) 0%,rgba(22,20,15,.5) 52%,#16140f 100%)}
+.keyart figcaption{bottom:150px}
+.keyart__cue{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:88px;z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);pointer-events:none;
+}
+.keyart__cue i{font-style:normal;font-size:19px;line-height:1;color:var(--lime);
+  animation:cueNudge 1.9s ease-in-out infinite}
+@keyframes cueNudge{
+  0%,100%{transform:translateY(-2px);opacity:.55}
+  50%{transform:translateY(4px);opacity:1}
+}
+.firstcut{margin-top:26px}
+/* the cue and the action bar have to read over a bright, busy frame */
+.keyart__cue{bottom:104px;text-shadow:0 2px 10px rgba(0,0,0,.9)}
+.keyart__cue i{filter:drop-shadow(0 2px 8px rgba(0,0,0,.9))}
+.doc__bar{background:linear-gradient(180deg,rgba(22,20,15,0),rgba(22,20,15,.9) 30%,#16140f 70%);
+  padding-top:26px}
