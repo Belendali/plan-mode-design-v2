@@ -904,6 +904,7 @@ document.getElementById('send').onclick = () => {
   if (!v) return;
   input.value = '';
   setSend('disabled');
+  if (THREAD) { threadEdit(THREAD.name, THREAD.by, THREAD.baseTh, v); return; }
   if (parseMention(v)) { runMention(v); return; }
   if (awaitingReview) {
     if (GO_WORDS.test(v)) awaitingReview.go(v);
@@ -1961,6 +1962,8 @@ const LIBRARY = [
 
 // name → { th, filter, ver } once the crew has reworked it
 const ASSET_STATE = {};
+// the asset the chat is scoped to, if any
+let THREAD = null;
 // variants you chose to keep alongside the original
 const ASSET_KEPT = [];
 
@@ -2519,6 +2522,9 @@ function openAssetThread(name, by, baseTh) {
   const live = ASSET_STATE[name] || {};
   const th = live.th || baseTh;
   const agent = { name: `${by} Wana`, gif: `assets/crew-${by.toLowerCase()}.webp` };
+  THREAD = { name, by, baseTh };
+  clearStart();
+  if (typeof perch !== 'undefined' && perch) perch.style.opacity = '0';
 
   document.getElementById('scope')?.remove();
   const scope = el('div', 'scope');
@@ -2531,20 +2537,16 @@ function openAssetThread(name, by, baseTh) {
   wrap.insertBefore(scope, wrap.querySelector('.composer'));
   scope.querySelector('button').onclick = () => {
     scope.remove();
+    THREAD = null;
     input.placeholder = 'Tell Wana what to change…';
   };
 
   push(el('div', 'joined', `New thread · ${name}`));
-  agentSay(agent, `We are on ${name} now. Tell me what to change — the paint, the shape, whether it should move — and I will show you a version before anything lands in the build.`);
-  const chips = push(el('div', 'replies'));
-  const asks = ASSET_VARIANTS[name]
-    ? (ASSET_VARIANTS[name].chips || []).concat('Give it an idle animation')
-    : ['Warmer colour', 'Give it an idle animation'];
-  asks.forEach((t, i) => {
-    const b = el('button', 'reply' + (i === 0 ? ' reply--go' : ''), t);
-    b.onclick = () => { chips.remove(); threadEdit(name, by, baseTh, t); };
-    chips.appendChild(b);
-  });
+  const cover = push(el('div', 'cover'));
+  cover.innerHTML = `
+    <div class="cover__shot" style="background-image:url('assets/thumb-${th}.jpg')"></div>
+    <span class="cover__name">${name}<b>v${live.ver || 1}</b></span>`;
+  agentSay(agent, 'What would you like it to look like?');
   input.placeholder = `Tell ${by} Wana about ${name}…`;
   scrollDown();
 }
@@ -2567,6 +2569,7 @@ async function threadEdit(name, by, baseTh, brief) {
   }
   await wait(500);
   agentSay(agent, 'Here it is next to the one in the build — replace it, or keep both.');
+  setSend('disabled');
   openAsset(name, baseTh, { th, brief, anim });
 }
 
@@ -2577,7 +2580,7 @@ const HUD_SLOT = { 'HUD · speed': '.hud2__r', 'HUD · timer': '.hud2__l' };
 const CAR_PAINT = {
   'car-v2':      ['#8E1730', '#C2213B'],
   'car-amber':   ['#8A4A0C', '#C87B18'],
-  'car-cyan':    ['#12405F', '#2076A8'],
+  'car-cyan':    ['#124F4A', '#1E8C7E'],
   'car-magenta': ['#5E1354', '#A82690'],
 };
 function applyAsset(name, next) {

@@ -2110,3 +2110,19 @@ html[style*="--car-paint"] .car-roof{fill:var(--car-roof)}
 @keyframes carIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 .sc-car.is-idle,.gd-player.is-idle{animation:carIdle 2.4s ease-in-out infinite}
 .ax__shot.is-anim{animation:carIdle 2.4s ease-in-out infinite}
+
+/* the cover that opens a thread about one asset */
+.cover{margin:2px 0 10px}
+.cover__shot{
+  width:100%;aspect-ratio:16/10;border-radius:14px;
+  background-size:cover;background-position:center;
+  border:1px solid rgba(255,255,255,.12);
+}
+.cover__name{
+  display:flex;align-items:center;gap:8px;margin-top:8px;
+  font-size:12.5px;color:rgba(255,255,255,.55);
+}
+.cover__name b{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;font-weight:600;
+  padding:2px 7px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);
+}
