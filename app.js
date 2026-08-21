@@ -3136,9 +3136,9 @@ if (jump >= 1 && jump <= STEPS.length) {
   STEPS[jump - 1][1]();
 }
 
-// ?site / #site — start from wanaka.app, the way a new user arrives
-// ?login jumps straight to the sign-in card over the Studio
-if (QUERY.includes('site') || location.hash === '#site') {
+// A plain link is the whole thing: start on wanaka.app, the way a new user
+// arrives. ?site says the same thing explicitly; ?login jumps to the card.
+if (QUERY.includes('site') || location.hash === '#site' || (!QUERY && !location.hash)) {
   clearStart();
   if (QUERY.includes('login')) screenLogin(SITE.seed);
   else screenSite();
